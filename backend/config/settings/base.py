@@ -34,7 +34,7 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STORAGES = {**globals().get("STORAGES", {}), "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}}
+STORAGES = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"}, **globals().get("STORAGES", {}), "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}}
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
