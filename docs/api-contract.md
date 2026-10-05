@@ -15,7 +15,11 @@ Current endpoints:
 - `POST /api/v1/appointments/` — anonymous or authenticated appointment request; authenticated users can list their own records.
 - `/api/v1/saved-projects/` — authenticated saved-project management, restricted to the current user.
 - `POST /api/v1/auth/token/` and `/api/v1/auth/token/refresh/` — JWT authentication.
+- `POST /api/v1/auth/register/` — create a client account (email, first name, last name, password). Accounts are always created with the client role.
+- `GET`/`PATCH /api/v1/auth/me/` — the authenticated user's profile; only first and last name are editable.
 
-Staff users can manage domain content and operational enquiries and appointments. Public content is filtered server-side to published records; demo content is never implied to be real and must be explicitly marked with `is_demo=true`. Generic local demo records can be created with `python manage.py seed_demo`.
+Saved projects, enquiries and appointments include read-only `project_summary` (and, where relevant, `service_summary`) objects alongside the existing `project`/`service` IDs so clients can display them without extra requests.
+
+Staff users can manage domain content and operational enquiries and appointments. Public content is filtered server-side to published records; demo content is never implied to be real and must be explicitly marked with `is_demo=true`. Generic local demo records can be created with `python manage.py seed_demo`. The verified company services, achievements and project categories can be created with `python manage.py seed_company_content`; it is safe to re-run and never overwrites records edited in Django Admin.
 
 Future resources will use plural nouns, standard HTTP status codes, field-level validation responses, pagination, and URL query parameters for filtering, searching, and ordering.

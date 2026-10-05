@@ -28,6 +28,12 @@ ASGI_APPLICATION = "config.asgi.application"
 TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [], "APP_DIRS": True, "OPTIONS": {"context_processors": ["django.template.context_processors.request", "django.contrib.auth.context_processors.auth", "django.contrib.messages.context_processors.messages"]}}]
 DATABASES = {"default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
 AUTH_USER_MODEL = "users.User"
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 LANGUAGE_CODE = "en-gb"
 TIME_ZONE = "Africa/Lagos"
 USE_I18N = True
@@ -41,5 +47,5 @@ CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",), "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",), "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema", "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend", "rest_framework.filters.SearchFilter", "rest_framework.filters.OrderingFilter"], "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination", "PAGE_SIZE": 12}
 SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": timedelta(minutes=15), "REFRESH_TOKEN_LIFETIME": timedelta(days=7), "AUTH_HEADER_TYPES": ("Bearer",)}
-SPECTACULAR_SETTINGS = {"TITLE": "BRIGHTHOMES API", "DESCRIPTION": "Versioned REST API for BRIGHTHOMES CONSTRUCTION SERVICE.", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False}
+SPECTACULAR_SETTINGS = {"TITLE": "BRIGHTHOMES API", "DESCRIPTION": "Versioned REST API for BRIGHTHOMES CONSTRUCTION SERVICE.", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False, "ENUM_NAME_OVERRIDES": {"ProjectStatusEnum": "projects.models.Project.Status", "EnquiryStatusEnum": "enquiries.models.Enquiry.Status", "AppointmentStatusEnum": "appointments.models.Appointment.Status"}}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

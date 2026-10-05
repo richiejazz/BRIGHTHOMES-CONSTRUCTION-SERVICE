@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from services.models import Service
@@ -33,6 +34,24 @@ class ProjectSerializer(serializers.ModelSerializer):
         if not category.is_active and not self.context["request"].user.is_staff:
             raise serializers.ValidationError("The selected category is not active.")
         return category
+
+
+class ProjectSummarySerializer(serializers.ModelSerializer):
+    """Compact, read-only project reference embedded in client-owned records."""
+
+    category = serializers.CharField(source="category.name", read_only=True)
+    cover_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = ["id", "slug", "title", "category", "status", "is_published", "is_demo", "cover_image"]
+        read_only_fields = fields
+
+    @extend_schema_field(ProjectImageSerializer(allow_null=True))
+    def get_cover_image(self, project):
+        images = list(project.images.all())
+        cover = next((image for image in images if image.is_cover), images[0] if images else None)
+        return ProjectImageSerializer(cover, context=self.context).data if cover else None
 
 
 class ProjectImageWriteSerializer(serializers.ModelSerializer):

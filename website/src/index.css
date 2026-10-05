@@ -1,5 +1,106 @@
 @import "tailwindcss";
 
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #242321; background: #f6f3ee; font-synthesis: none; text-rendering: optimizeLegibility; }
-body { margin: 0; min-width: 320px; }
-button, input, textarea, select { font: inherit; }
+/*
+ * BRIGHTHOMES design tokens.
+ * Charcoal foundations, warm white surfaces, stone neutrals and a restrained bronze accent.
+ * Square geometry and hairline borders are deliberate: the brand is architectural, not app-like.
+ */
+@theme {
+  --font-display: "Instrument Serif", "Iowan Old Style", "Times New Roman", serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-ink: #161513;
+  --color-charcoal: #22211f;
+  --color-graphite: #3a3835;
+  --color-stone-600: #5f5a52;
+  --color-stone-500: #7a746a;
+  --color-stone-400: #a59e92;
+  --color-stone-300: #cfc8bc;
+  --color-stone-200: #e2dcd1;
+  --color-bone: #ece7de;
+  --color-paper: #f6f3ee;
+  --color-bronze: #a9844f;
+  --color-bronze-light: #c9a46a;
+  --color-bronze-dark: #7a5a2c;
+  --color-success: #3f6b4a;
+  --color-danger: #9b3b2f;
+
+  --radius-xs: 2px;
+
+  --ease-architectural: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 0.9s var(--ease-architectural) both;
+  --animate-fade: fade 0.6s ease-out both;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, textarea, select { font: inherit; }
+  ::selection { background: var(--color-bronze-light); color: var(--color-ink); }
+
+  :focus-visible {
+    outline: 2px solid var(--color-bronze);
+    outline-offset: 3px;
+  }
+
+  dialog::backdrop { background: rgb(22 21 19 / 0.6); }
+}
+
+@layer components {
+  /* Small uppercase label used above headings and on metadata. */
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /* Scroll reveal, toggled by the Reveal component. */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.9s var(--ease-architectural), transform 0.9s var(--ease-architectural); }
+  .reveal[data-visible="true"] { opacity: 1; transform: none; }
+
+  /* Faint architectural drawing grid. */
+  .blueprint-grid {
+    background-image:
+      linear-gradient(to right, rgb(201 164 106 / 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(201 164 106 / 0.07) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+}

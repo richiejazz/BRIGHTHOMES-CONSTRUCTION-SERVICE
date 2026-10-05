@@ -1,14 +1,19 @@
 from rest_framework import serializers
 
+from projects.serializers import ProjectSummarySerializer
+from services.serializers import ServiceSummarySerializer
+
 from .models import Appointment
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    project_summary = ProjectSummarySerializer(source="project", read_only=True)
+    service_summary = ServiceSummarySerializer(source="service", read_only=True)
 
     class Meta:
         model = Appointment
-        fields = ["id", "user", "name", "email", "phone", "preferred_date", "preferred_time", "time_window", "message", "project", "service", "status", "internal_notes", "created_at", "updated_at"]
+        fields = ["id", "user", "name", "email", "phone", "preferred_date", "preferred_time", "time_window", "message", "project", "project_summary", "service", "service_summary", "status", "internal_notes", "created_at", "updated_at"]
         read_only_fields = ["user", "status", "internal_notes", "created_at", "updated_at"]
 
     def validate(self, attrs):

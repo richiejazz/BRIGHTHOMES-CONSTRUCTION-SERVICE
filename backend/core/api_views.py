@@ -80,8 +80,10 @@ class EnquiryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_staff:
-            return Enquiry.objects.all()
-        return Enquiry.objects.filter(user=self.request.user) if self.request.user.is_authenticated else Enquiry.objects.none()
+            return Enquiry.objects.select_related("project__category", "service").prefetch_related("project__images")
+        if not self.request.user.is_authenticated:
+            return Enquiry.objects.none()
+        return Enquiry.objects.filter(user=self.request.user).select_related("project__category", "service").prefetch_related("project__images")
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -93,8 +95,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_staff:
-            return Appointment.objects.all()
-        return Appointment.objects.filter(user=self.request.user) if self.request.user.is_authenticated else Appointment.objects.none()
+            return Appointment.objects.select_related("project__category", "service").prefetch_related("project__images")
+        if not self.request.user.is_authenticated:
+            return Appointment.objects.none()
+        return Appointment.objects.filter(user=self.request.user).select_related("project__category", "service").prefetch_related("project__images")
 
 
 class SavedProjectViewSet(viewsets.ModelViewSet):
@@ -112,7 +116,7 @@ class SavedProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False) or not self.request.user.is_authenticated:
             return SavedProject.objects.none()
-        return SavedProject.objects.filter(user=self.request.user).select_related("project")
+        return SavedProject.objects.filter(user=self.request.user).select_related("project__category").prefetch_related("project__images")
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
