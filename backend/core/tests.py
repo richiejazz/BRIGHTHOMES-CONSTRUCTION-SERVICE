@@ -87,3 +87,19 @@ class Phase2APITestCase(TestCase):
         self.published.is_demo = True
         self.published.save(update_fields=["is_demo", "updated_at"])
         self.assertTrue(Project.objects.get(pk=self.published.pk).is_demo)
+
+    def test_internal_notes_are_only_returned_to_staff(self):
+        self.client.force_authenticate(self.client_user)
+        created = self.client.post("/api/v1/enquiries/", {"name": "Client", "email": "client@example.com", "message": "A request."}, format="json")
+        self.assertNotIn("internal_notes", created.data)
+        self.client.post("/api/v1/appointments/", {"name": "Client", "email": "client@example.com", "preferred_date": "2030-01-02"}, format="json")
+        Enquiry.objects.update(internal_notes="Staff only")
+        Appointment.objects.update(internal_notes="Staff only")
+        enquiry_id, appointment_id = Enquiry.objects.get().id, Appointment.objects.get().id
+        for url in ("/api/v1/enquiries/", "/api/v1/appointments/"):
+            self.assertNotIn("internal_notes", self.client.get(url).data["results"][0])
+        self.assertNotIn("internal_notes", self.client.get(f"/api/v1/enquiries/{enquiry_id}/").data)
+        self.assertNotIn("internal_notes", self.client.get(f"/api/v1/appointments/{appointment_id}/").data)
+        self.client.force_authenticate(self.staff_user)
+        self.assertEqual(self.client.get(f"/api/v1/enquiries/{enquiry_id}/").data["internal_notes"], "Staff only")
+        self.assertEqual(self.client.get(f"/api/v1/appointments/{appointment_id}/").data["internal_notes"], "Staff only")

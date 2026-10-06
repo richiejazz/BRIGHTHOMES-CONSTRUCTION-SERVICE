@@ -20,6 +20,8 @@ Current endpoints:
 
 Saved projects, enquiries and appointments include read-only `project_summary` (and, where relevant, `service_summary`) objects alongside the existing `project`/`service` IDs so clients can display them without extra requests.
 
+Enquiry and appointment `internal_notes` are staff-only: the field is omitted from every response to non-staff users, including a client's own records.
+
 Staff users can manage domain content and operational enquiries and appointments. Public content is filtered server-side to published records; demo content is never implied to be real and must be explicitly marked with `is_demo=true`. Generic local demo records can be created with `python manage.py seed_demo`. The verified company services, achievements and project categories can be created with `python manage.py seed_company_content`; it is safe to re-run and never overwrites records edited in Django Admin.
 
 Future resources will use plural nouns, standard HTTP status codes, field-level validation responses, pagination, and URL query parameters for filtering, searching, and ordering.

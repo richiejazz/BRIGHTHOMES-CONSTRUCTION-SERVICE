@@ -25,3 +25,11 @@ class EnquirySerializer(serializers.ModelSerializer):
         if request.user.is_authenticated:
             attrs["user"] = request.user
         return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Internal notes are written by staff for staff; clients never receive them.
+        request = self.context.get("request")
+        if not (request and request.user.is_staff):
+            data.pop("internal_notes", None)
+        return data
