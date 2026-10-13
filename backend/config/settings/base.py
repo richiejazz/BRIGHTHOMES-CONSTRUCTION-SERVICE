@@ -14,7 +14,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "corsheaders", "django_filters", "drf_spectacular", "rest_framework", "rest_framework_simplejwt",
-    "core", "users", "projects", "services", "enquiries", "appointments", "saved", "dashboard",
+    "core", "users", "projects", "properties", "services", "enquiries", "appointments", "saved", "dashboard",
 ]
 if env("CLOUDINARY_URL", default=""):
     INSTALLED_APPS += ["cloudinary", "cloudinary_storage"]
@@ -47,5 +47,5 @@ CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",), "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",), "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema", "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend", "rest_framework.filters.SearchFilter", "rest_framework.filters.OrderingFilter"], "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination", "PAGE_SIZE": 12}
 SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": timedelta(minutes=15), "REFRESH_TOKEN_LIFETIME": timedelta(days=7), "AUTH_HEADER_TYPES": ("Bearer",)}
-SPECTACULAR_SETTINGS = {"TITLE": "BRIGHTHOMES API", "DESCRIPTION": "Versioned REST API for BRIGHTHOMES CONSTRUCTION SERVICE.", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False, "ENUM_NAME_OVERRIDES": {"ProjectStatusEnum": "projects.models.Project.Status", "EnquiryStatusEnum": "enquiries.models.Enquiry.Status", "AppointmentStatusEnum": "appointments.models.Appointment.Status"}}
+SPECTACULAR_SETTINGS = {"TITLE": "BRIGHTHOMES API", "DESCRIPTION": "Versioned REST API for BRIGHTHOMES CONSTRUCTION SERVICE.", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False, "ENUM_NAME_OVERRIDES": {"ProjectStatusEnum": "projects.models.Project.Status", "EnquiryStatusEnum": "enquiries.models.Enquiry.Status", "AppointmentStatusEnum": "appointments.models.Appointment.Status", "PropertyStatusEnum": "properties.models.Property.Status", "ListingTypeEnum": "properties.models.Property.ListingType", "PriceDisplayEnum": "properties.models.Property.PriceDisplay"}}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

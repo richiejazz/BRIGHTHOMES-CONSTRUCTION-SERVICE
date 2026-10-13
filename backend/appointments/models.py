@@ -20,6 +20,7 @@ class Appointment(models.Model):
     message = models.TextField(blank=True)
     project = models.ForeignKey("projects.Project", on_delete=models.SET_NULL, related_name="appointments", blank=True, null=True)
     service = models.ForeignKey("services.Service", on_delete=models.SET_NULL, related_name="appointments", blank=True, null=True)
+    property = models.ForeignKey("properties.Property", on_delete=models.SET_NULL, related_name="appointments", blank=True, null=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.REQUESTED)
     internal_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

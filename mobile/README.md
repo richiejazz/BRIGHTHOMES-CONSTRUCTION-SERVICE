@@ -1,6 +1,6 @@
 # BRIGHTHOMES mobile
 
-The client companion app: discover projects and services, save projects, send enquiries, request consultations and follow their status. Expo SDK 57, Expo Router, TypeScript, TanStack Query and Axios, talking to the Django API at `/api/v1/`.
+The client app for construction and real estate: explore projects, properties and services, save projects and properties, send enquiries, request consultations and follow their status, and manage a profile with a photo. Expo SDK 57, Expo Router, TypeScript, TanStack Query and Axios, talking to the Django API at `/api/v1/`.
 
 ## Setup
 
@@ -22,12 +22,13 @@ The web preview (`npx expo start --web`, port 8081) also needs `http://localhost
 
 ## Structure
 
-- `app/` — routes. `(tabs)/` holds the five tabs (Home, Projects, Saved, Activity, Profile); detail, form, account and utility screens are stacked above them.
+- `app/` — routes. `(tabs)/` holds the five tabs (Home, Explore, Saved, Activity, Profile). Explore switches between Construction, Real Estate and Services; detail, form, account and utility screens are stacked above the tabs.
 - `src/api/` — Axios client (JWT refresh), query hooks, response types and friendly error mapping. Screens never call Axios directly.
 - `src/auth/` — session state, the sign-in prompt and signed-out fallbacks.
-- `src/components/` — UI primitives (`ui/`), brand drawings (`brand/`) and feature components.
+- `src/components/` — UI primitives (`ui/`), photography and galleries (`media/`), cards and detail layouts (`content/`), Explore browsers (`explore/`), account pieces (`account/`) and brand drawings (`brand/`).
 - `src/content/company.ts` — verified company copy with no API source. Do not add unverified claims.
-- `src/theme/` — colours and type, shared with the website's design tokens.
+- `src/content/media.ts` — the bundled editorial photographs (`assets/editorial/`), with alt text and credits. These are temporary, illustrative Unsplash images; swap a file and its entry here to replace one.
+- `src/theme/` — light and dark colour tokens, Cormorant Garamond + Inter type scale, and `ThemeProvider` (System / Light / Dark, saved on the device with AsyncStorage). Components read colours through `useTheme()` or `makeStyles()`; nothing hard-codes a colour.
 
 ## Sessions
 

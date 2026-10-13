@@ -2,16 +2,17 @@ import type { ReactNode } from 'react'
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import Svg, { G, Path, Rect, Text as SvgText } from 'react-native-svg'
 
-// Line-drawn architectural elevations used wherever real photography is not yet available.
+import { useTheme } from '../../theme'
+
+// Line-drawn architectural elevations used wherever a photograph is missing or fails to load.
 // They are deliberately drawings, not photographs, so they can never be mistaken for actual
 // BRIGHTHOMES projects. Ported from website/src/components/art/Elevations.tsx.
 
-type Tone = 'dark' | 'light'
 type Palette = { bg: string; line: string; faint: string; accent: string }
 
-const palettes: Record<Tone, Palette> = {
-  dark: { bg: '#1d1c1a', line: '#c9a46a', faint: 'rgba(201,164,106,0.18)', accent: '#e2dcd1' },
-  light: { bg: '#ece7de', line: '#7a5a2c', faint: 'rgba(122,90,44,0.16)', accent: '#3a3835' },
+const palettes: Record<'dark' | 'light', Palette> = {
+  dark: { bg: '#1A1816', line: '#C6A066', faint: 'rgba(198,160,102,0.16)', accent: '#D8D0C2' },
+  light: { bg: '#EDE7DC', line: '#7A592A', faint: 'rgba(122,89,42,0.14)', accent: '#3A3733' },
 }
 
 function windows(x: number, y: number, cols: number, rows: number, w: number, h: number, gx: number, gy: number) {
@@ -69,9 +70,10 @@ const variants: ((c: Palette) => ReactNode)[] = [
 
 const grid = Array.from({ length: 16 }, (_, i) => `M${i * 50} 0V600`).join('') + Array.from({ length: 12 }, (_, i) => `M0 ${i * 50}H800`).join('')
 
-/** 4:3 elevation drawing used as a stand-in image for projects without photography. */
-export function ElevationPlaceholder({ seed = 0, tone = 'dark', style }: { seed?: number; tone?: Tone; style?: StyleProp<ViewStyle> }) {
-  const c = palettes[tone]
+/** Elevation drawing used as a stand-in image. Follows the active colour scheme unless a tone is given. */
+export function ElevationPlaceholder({ seed = 0, tone, style }: { seed?: number; tone?: 'dark' | 'light'; style?: StyleProp<ViewStyle> }) {
+  const { scheme } = useTheme()
+  const c = palettes[tone ?? scheme]
   return (
     <View style={[StyleSheet.absoluteFill, style]} aria-hidden>
       <Svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
@@ -85,13 +87,13 @@ export function ElevationPlaceholder({ seed = 0, tone = 'dark', style }: { seed?
   )
 }
 
-/** Faint drawing grid for dark hero panels. */
-export function BlueprintGrid({ style }: { style?: StyleProp<ViewStyle> }) {
+/** Faint drawing grid for dark panels. */
+export function BlueprintGrid({ style, color = 'rgba(198,160,102,0.07)' }: { style?: StyleProp<ViewStyle>; color?: string }) {
   const lines = Array.from({ length: 20 }, (_, i) => `M${i * 40} 0V1200M0 ${i * 40}H800`).join('') + Array.from({ length: 12 }, (_, i) => `M0 ${(i + 20) * 40}H800`).join('')
   return (
     <View style={[StyleSheet.absoluteFill, style]} aria-hidden>
       <Svg width="100%" height="100%">
-        <Path d={lines} stroke="rgba(201,164,106,0.08)" strokeWidth={1} />
+        <Path d={lines} stroke={color} strokeWidth={1} />
       </Svg>
     </View>
   )

@@ -5,17 +5,20 @@ import { StyleSheet, View, type ScrollView, type TextInput } from 'react-native'
 import { toApiError } from '../src/api/errors'
 import { useAuth } from '../src/auth/AuthProvider'
 import { leaveAuthScreen } from '../src/auth/navigation'
+import { AuthFrame } from '../src/components/account/AuthFrame'
 import { Button } from '../src/components/ui/Button'
-import { FormAlert, FormScreen } from '../src/components/ui/FormScreen'
+import { Eyebrow } from '../src/components/ui/Editorial'
+import { FormAlert } from '../src/components/ui/FormScreen'
 import { Text } from '../src/components/ui/Text'
 import { TextField } from '../src/components/ui/TextField'
 import { useToast } from '../src/components/ui/Toast'
 import { compact, validateEmail, validateName, type FieldErrors } from '../src/lib/validation'
-import { colors, space } from '../src/theme'
+import { makeStyles, space } from '../src/theme'
 
 type Field = 'first_name' | 'last_name' | 'email' | 'password' | 'confirm'
 
 export default function RegisterScreen() {
+  const styles = useStyles()
   const { register } = useAuth()
   const toast = useToast()
   const scroll = useRef<ScrollView>(null)
@@ -60,12 +63,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <FormScreen ref={scroll}>
-      <View style={styles.intro}>
-        <Text variant="eyebrow">Client account</Text>
-        <Text variant="display">Create an account</Text>
-        <Text variant="body">Save projects you admire and follow your enquiries and consultation requests in one place.</Text>
-      </View>
+    <AuthFrame ref={scroll} eyebrow="Client account" title="Create your account." intro="Save projects and properties, and follow your enquiries and consultation requests in one place.">
       <FormAlert message={formError} />
       <TextField label="First name" value={values.first_name} onChangeText={set('first_name')} error={errors.first_name} autoComplete="given-name" textContentType="givenName" returnKeyType="next" onSubmitEditing={() => refs.last_name.current?.focus()} submitBehavior="submit" />
       <TextField ref={refs.last_name} label="Last name" value={values.last_name} onChangeText={set('last_name')} error={errors.last_name} autoComplete="family-name" textContentType="familyName" returnKeyType="next" onSubmitEditing={() => refs.email.current?.focus()} submitBehavior="submit" />
@@ -88,14 +86,15 @@ export default function RegisterScreen() {
       <TextField ref={refs.confirm} label="Confirm password" value={values.confirm} onChangeText={set('confirm')} error={errors.confirm} secureTextEntry autoCapitalize="none" autoComplete="new-password" textContentType="newPassword" returnKeyType="go" onSubmitEditing={onSubmit} />
       <Button label={submitting ? 'Creating account…' : 'Create account'} loading={submitting} onPress={onSubmit} fullWidth />
       <View style={styles.alt}>
-        <Text variant="heading">Already registered?</Text>
+        <Eyebrow label="Already registered?" />
         <Button label="Sign in" variant="secondary" onPress={() => router.replace('/login')} fullWidth />
       </View>
-    </FormScreen>
+    </AuthFrame>
   )
 }
 
-const styles = StyleSheet.create({
-  intro: { gap: space.md },
-  alt: { gap: space.md, borderTopWidth: 1, borderTopColor: colors.stone300, paddingTop: space.xl, marginTop: space.md },
-})
+const useStyles = makeStyles((c) =>
+  StyleSheet.create({
+    alt: { gap: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: space.xl, marginTop: space.md },
+  }),
+)

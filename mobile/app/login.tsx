@@ -1,19 +1,23 @@
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useRef, useState } from 'react'
 import { StyleSheet, View, type TextInput } from 'react-native'
 
 import { toApiError } from '../src/api/errors'
 import { useAuth } from '../src/auth/AuthProvider'
 import { leaveAuthScreen } from '../src/auth/navigation'
+import { AuthFrame } from '../src/components/account/AuthFrame'
 import { Button } from '../src/components/ui/Button'
-import { FormAlert, FormScreen } from '../src/components/ui/FormScreen'
+import { Eyebrow } from '../src/components/ui/Editorial'
+import { FormAlert, Notice } from '../src/components/ui/FormScreen'
 import { Text } from '../src/components/ui/Text'
 import { TextField } from '../src/components/ui/TextField'
 import { useToast } from '../src/components/ui/Toast'
 import { validateEmail } from '../src/lib/validation'
-import { colors, space } from '../src/theme'
+import { makeStyles, space } from '../src/theme'
 
 export default function LoginScreen() {
+  const { reason } = useLocalSearchParams<{ reason?: string }>()
+  const styles = useStyles()
   const { login } = useAuth()
   const toast = useToast()
   const passwordRef = useRef<TextInput>(null)
@@ -41,12 +45,13 @@ export default function LoginScreen() {
   }
 
   return (
-    <FormScreen>
-      <View style={styles.intro}>
-        <Text variant="eyebrow">Client account</Text>
-        <Text variant="display">Sign in</Text>
-        <Text variant="body">Access your saved projects, enquiries and consultation requests.</Text>
-      </View>
+    <AuthFrame eyebrow="Client account" title="Welcome back." intro="Sign in to see your saved projects and properties, enquiries and consultation requests.">
+      {reason === 'expired' ? (
+        <Notice tone="accent">
+          <Text variant="label">Your session has ended</Text>
+          <Text variant="small">For your security, sessions expire after a period of inactivity. Sign in again to continue where you left off.</Text>
+        </Notice>
+      ) : null}
       <FormAlert message={formError} />
       <TextField
         label="Email address"
@@ -64,15 +69,16 @@ export default function LoginScreen() {
       <TextField ref={passwordRef} label="Password" value={password} onChangeText={setPassword} error={errors.password} secureTextEntry autoCapitalize="none" autoComplete="current-password" textContentType="password" returnKeyType="go" onSubmitEditing={onSubmit} />
       <Button label={submitting ? 'Signing in…' : 'Sign in'} loading={submitting} onPress={onSubmit} fullWidth />
       <View style={styles.alt}>
-        <Text variant="heading">New to BRIGHTHOMES?</Text>
-        <Text variant="body">Create an account to save projects and keep track of your enquiries and consultation requests.</Text>
+        <Eyebrow label="New to BRIGHTHOMES?" />
+        <Text variant="body">Create a free account to keep a shortlist and follow your requests in one place.</Text>
         <Button label="Create an account" variant="secondary" onPress={() => router.replace('/register')} fullWidth />
       </View>
-    </FormScreen>
+    </AuthFrame>
   )
 }
 
-const styles = StyleSheet.create({
-  intro: { gap: space.md },
-  alt: { gap: space.md, borderTopWidth: 1, borderTopColor: colors.stone300, paddingTop: space.xl, marginTop: space.md },
-})
+const useStyles = makeStyles((c) =>
+  StyleSheet.create({
+    alt: { gap: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: space.xl, marginTop: space.md },
+  }),
+)

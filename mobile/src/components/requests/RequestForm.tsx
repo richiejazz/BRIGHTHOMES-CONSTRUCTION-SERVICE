@@ -4,18 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, View, type ScrollView, type TextInput } from 'react-native'
 
 import { useSubmitAppointment, useSubmitEnquiry } from '../../api/account'
-import { useProject, useServices } from '../../api/content'
+import { useProject, useProperty, useServices } from '../../api/content'
 import { toApiError } from '../../api/errors'
 import type { Appointment, Enquiry, User } from '../../api/types'
 import { useAuth } from '../../auth/AuthProvider'
 import { formatWeekdayDate, localDate, todayIso } from '../../lib/format'
 import { compact, validateEmail, validateMessage, validateName, validatePhone, type FieldErrors } from '../../lib/validation'
-import { colors, space } from '../../theme'
+import { makeStyles, space, useTheme } from '../../theme'
 import { preferredSlot } from '../activity/RequestRows'
-import { DemoBadge } from '../ui/Badges'
+import { IllustrativeTag } from '../ui/Badges'
 import { Button } from '../ui/Button'
 import { DateTimeField } from '../ui/DateTimeField'
-import { FormAlert, FormScreen } from '../ui/FormScreen'
+import { Eyebrow } from '../ui/Editorial'
+import { FormAlert, FormScreen, Notice } from '../ui/FormScreen'
 import { SelectField } from '../ui/SelectField'
 import { Text } from '../ui/Text'
 import { TextField } from '../ui/TextField'
@@ -35,19 +36,23 @@ const fullName = (user: User | null) => (user ? `${user.first_name} ${user.last_
 /**
  * Enquiry or consultation request. Works signed out (the API accepts anonymous requests);
  * signed-in clients get their details prefilled and can follow the request in Activity.
- * Opened with optional `project` and `service` slug params for context.
+ * Opened with optional `project`, `property` and `service` slug params for context.
  */
 export function RequestForm({ kind }: { kind: Kind }) {
-  const params = useLocalSearchParams<{ project?: string; service?: string }>()
+  const params = useLocalSearchParams<{ project?: string; property?: string; service?: string }>()
   const { user, status } = useAuth()
+  const styles = useStyles()
+  const { colors } = useTheme()
   const project = useProject(params.project)
+  const property = useProperty(params.property)
   const services = useServices()
   const enquiry = useSubmitEnquiry()
   const appointment = useSubmitAppointment()
   const mutation = kind === 'enquiry' ? enquiry : appointment
 
   const [includeProject, setIncludeProject] = useState(Boolean(params.project))
-  const [values, setValues] = useState<Values>(() => ({ name: fullName(user), email: user?.email ?? '', phone: '', service: params.service ?? '', message: '', preferred_date: '', preferred_time: '', time_window: '' }))
+  const [includeProperty, setIncludeProperty] = useState(Boolean(params.property))
+  const [values, setValues] = useState<Values>(() => ({ name: fullName(user), email: user?.email ?? '', phone: user?.phone ?? '', service: params.service ?? '', message: '', preferred_date: '', preferred_time: '', time_window: '' }))
   const [errors, setErrors] = useState<FieldErrors<Field>>({})
   const [formError, setFormError] = useState<string>()
   const scroll = useRef<ScrollView>(null)
@@ -56,7 +61,7 @@ export function RequestForm({ kind }: { kind: Kind }) {
 
   // Prefill from the account once it loads, without overwriting anything already typed.
   useEffect(() => {
-    if (user) setValues((current) => ({ ...current, name: current.name || fullName(user), email: current.email || user.email }))
+    if (user) setValues((current) => ({ ...current, name: current.name || fullName(user), email: current.email || user.email, phone: current.phone || user.phone }))
   }, [user])
 
   const set = (field: Field) => (value: string) => {
@@ -67,7 +72,13 @@ export function RequestForm({ kind }: { kind: Kind }) {
   if (mutation.isSuccess) return <Success kind={kind} record={mutation.data} signedIn={status === 'authenticated'} />
 
   const linkedProject = includeProject ? project.data : undefined
-  const waitingForProject = includeProject && project.isPending && Boolean(params.project)
+  const linkedProperty = includeProperty ? property.data : undefined
+  const waitingForContext = (includeProject && project.isPending && Boolean(params.project)) || (includeProperty && property.isPending && Boolean(params.property))
+  const linked = linkedProperty
+    ? { eyebrow: 'Regarding property', title: linkedProperty.title, isDemo: linkedProperty.is_demo, remove: () => setIncludeProperty(false), noun: 'property' }
+    : linkedProject
+      ? { eyebrow: 'Regarding project', title: linkedProject.title, isDemo: linkedProject.is_demo, remove: () => setIncludeProject(false), noun: 'project' }
+      : null
   const today = todayIso()
 
   const validate = () =>
@@ -95,6 +106,7 @@ export function RequestForm({ kind }: { kind: Kind }) {
       message: values.message.trim(),
       service: services.data?.find((service) => service.slug === values.service)?.id ?? null,
       project: linkedProject?.id ?? null,
+      property: linkedProperty?.id ?? null,
     }
     const onError = (error: unknown) => {
       const apiError = toApiError(error)
@@ -117,36 +129,35 @@ export function RequestForm({ kind }: { kind: Kind }) {
   return (
     <FormScreen ref={scroll}>
       <View style={styles.intro}>
-        <Text variant="title">{kind === 'enquiry' ? 'How can we help?' : 'Meet the BRIGHTHOMES team'}</Text>
+        <Eyebrow label={kind === 'enquiry' ? 'Enquiry' : 'Consultation'} />
+        <Text variant="display">{kind === 'enquiry' ? 'How can we help?' : 'Meet the BRIGHTHOMES team.'}</Text>
         <Text variant="body">
           {kind === 'enquiry'
-            ? 'Tell us about your plans or ask about a project. We’ll reply using the details you provide.'
+            ? 'Tell us about your plans, or ask about a property or project. We’ll reply using the details you provide.'
             : 'Choose a preferred date and time. This is a request, not a confirmed booking — our team will contact you to confirm.'}
         </Text>
       </View>
 
       {status === 'anonymous' ? (
-        <View style={styles.notice}>
-          <Text variant="small" color={colors.graphite}>
-            You can send this without an account. Sign in first if you’d like to follow it in Activity.
-          </Text>
+        <Notice>
+          <Text variant="small">You can send this without an account. Sign in first if you’d like to follow it in Activity.</Text>
           <Button label="Sign in" variant="link" onPress={() => router.push('/login')} />
-        </View>
+        </Notice>
       ) : null}
 
-      {linkedProject ? (
-        <View style={styles.context} accessible accessibilityLabel={`Regarding project: ${linkedProject.title}${linkedProject.is_demo ? ', demo content' : ''}`}>
-          <View style={styles.contextCopy}>
-            <Text variant="eyebrow" color={colors.stone500}>
-              Regarding project
-            </Text>
-            <Text variant="label">{linkedProject.title}</Text>
-            {linkedProject.is_demo ? <DemoBadge /> : null}
+      {linked ? (
+        <Notice tone="accent">
+          <View style={styles.context} accessible accessibilityLabel={`${linked.eyebrow}: ${linked.title}${linked.isDemo ? ', illustrative content' : ''}`}>
+            <View style={styles.contextCopy}>
+              <Text variant="eyebrow">{linked.eyebrow}</Text>
+              <Text variant="subheading">{linked.title}</Text>
+              {linked.isDemo ? <IllustrativeTag /> : null}
+            </View>
+            <Pressable onPress={linked.remove} accessibilityRole="button" accessibilityLabel={`Remove the ${linked.noun} from this request`} hitSlop={6} style={styles.remove}>
+              <X size={18} color={colors.textMuted} strokeWidth={1.6} />
+            </Pressable>
           </View>
-          <Pressable onPress={() => setIncludeProject(false)} accessibilityRole="button" accessibilityLabel="Remove project from this request" hitSlop={6} style={styles.remove}>
-            <X size={18} color={colors.stone600} strokeWidth={1.6} />
-          </Pressable>
-        </View>
+        </Notice>
       ) : null}
 
       <FormAlert message={formError} />
@@ -187,7 +198,7 @@ export function RequestForm({ kind }: { kind: Kind }) {
       <Button
         label={mutation.isPending ? 'Sending…' : kind === 'enquiry' ? 'Send enquiry' : 'Request consultation'}
         loading={mutation.isPending}
-        disabled={waitingForProject}
+        disabled={waitingForContext}
         onPress={onSubmit}
         fullWidth
       />
@@ -196,12 +207,14 @@ export function RequestForm({ kind }: { kind: Kind }) {
 }
 
 function Success({ kind, record, signedIn }: { kind: Kind; record: Enquiry | Appointment; signedIn: boolean }) {
+  const styles = useStyles()
+  const { colors } = useTheme()
   const appointment = kind === 'appointment' ? (record as Appointment) : null
   const done = () => (router.canGoBack() ? router.back() : router.replace('/'))
   return (
     <FormScreen>
       <View style={styles.success} accessibilityRole="alert">
-        <CheckCircle2 size={36} color={colors.bronzeDark} strokeWidth={1.4} />
+        <CheckCircle2 size={36} color={colors.accent} strokeWidth={1.2} />
         <Text variant="display">{appointment ? 'Your consultation request is in.' : 'Thank you — we’ve received your enquiry.'}</Text>
         <Text variant="body">
           {appointment
@@ -210,7 +223,7 @@ function Success({ kind, record, signedIn }: { kind: Kind; record: Enquiry | App
         </Text>
         {appointment ? (
           <View style={styles.summary}>
-            <Text variant="eyebrow" color={colors.stone500}>
+            <Text variant="eyebrow" color={colors.textSubtle}>
               Status: Requested
             </Text>
             <Text variant="label">
@@ -224,7 +237,7 @@ function Success({ kind, record, signedIn }: { kind: Kind; record: Enquiry | App
           <Button label="View in Activity" onPress={() => router.dismissTo(`/activity?tab=${kind === 'enquiry' ? 'enquiries' : 'appointments'}`)} fullWidth />
         ) : (
           <>
-            <Text variant="small" color={colors.stone600}>
+            <Text variant="small">
               This was sent without an account, so it won’t appear in Activity. Create an account to follow future requests.
             </Text>
             <Button label="Create Account" variant="secondary" onPress={() => router.replace('/register')} fullWidth />
@@ -236,13 +249,14 @@ function Success({ kind, record, signedIn }: { kind: Kind; record: Enquiry | App
   )
 }
 
-const styles = StyleSheet.create({
-  intro: { gap: space.sm },
-  notice: { gap: 0, padding: space.md, paddingBottom: 0, borderWidth: 1, borderColor: colors.stone300 },
-  context: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, padding: space.lg, backgroundColor: colors.bone, borderLeftWidth: 2, borderLeftColor: colors.bronze },
-  contextCopy: { flex: 1, gap: space.xs },
-  remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -10, marginRight: -10 },
-  success: { gap: space.lg, borderLeftWidth: 2, borderLeftColor: colors.bronze, paddingLeft: space.xl, paddingVertical: space.lg },
-  summary: { gap: space.xs, borderTopWidth: 1, borderTopColor: colors.stone300, paddingTop: space.md },
-  actions: { gap: space.md },
-})
+const useStyles = makeStyles((c) =>
+  StyleSheet.create({
+    intro: { gap: space.md },
+    context: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+    contextCopy: { flex: 1, gap: space.xs },
+    remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -10, marginRight: -10 },
+    success: { gap: space.lg, borderLeftWidth: 2, borderLeftColor: c.accent, paddingLeft: space.xl, paddingVertical: space.lg },
+    summary: { gap: space.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: space.md },
+    actions: { gap: space.md },
+  }),
+)

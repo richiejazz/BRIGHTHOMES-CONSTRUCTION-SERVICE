@@ -1,46 +1,40 @@
 import { StyleSheet, Text, View } from 'react-native'
 
-import type { AppointmentStatus, EnquiryStatus, ProjectStatus } from '../../api/types'
-import { colors, fonts } from '../../theme'
+import type { AppointmentStatus, EnquiryStatus } from '../../api/types'
+import { fonts, onImage, useTheme, type ThemeColors } from '../../theme'
 
-type Tone = 'neutral' | 'bronze' | 'success' | 'danger' | 'onDark'
+export type Tone = 'neutral' | 'accent' | 'success' | 'danger'
 
-const tones: Record<Tone, { border: string; text: string }> = {
-  neutral: { border: colors.stone300, text: colors.stone600 },
-  bronze: { border: colors.bronze, text: colors.bronzeDark },
-  success: { border: 'rgba(63,107,74,0.45)', text: colors.success },
-  danger: { border: 'rgba(155,59,47,0.45)', text: colors.danger },
-  onDark: { border: 'rgba(246,243,238,0.5)', text: colors.paper },
-}
+const toneColor = (tone: Tone, c: ThemeColors) => ({ neutral: c.textMuted, accent: c.accentText, success: c.success, danger: c.danger })[tone]
 
-/** Status is always written out, never conveyed by colour alone. */
-export function Badge({ label, tone = 'neutral', accessibilityLabel }: { label: string; tone?: Tone; accessibilityLabel?: string }) {
-  const { border, text } = tones[tone]
+/**
+ * A status written out in small capitals beside a square marker. The words carry the meaning;
+ * the marker's colour only reinforces it.
+ */
+export function StatusLabel({ label, tone = 'neutral', accessibilityLabel }: { label: string; tone?: Tone; accessibilityLabel?: string }) {
+  const { colors } = useTheme()
+  const color = toneColor(tone, colors)
   return (
-    <View accessible accessibilityLabel={accessibilityLabel ?? label} style={[styles.badge, { borderColor: border }]}>
-      <Text style={[styles.text, { color: text }]} maxFontSizeMultiplier={1.4}>
+    <View accessible accessibilityLabel={accessibilityLabel ?? label} style={styles.status}>
+      <View style={[styles.marker, { backgroundColor: color }]} />
+      <Text style={[styles.text, { color }]} maxFontSizeMultiplier={1.4}>
         {label}
       </Text>
     </View>
   )
 }
 
-const projectStatus: Record<ProjectStatus, { label: string; tone: Tone }> = {
-  completed: { label: 'Completed', tone: 'neutral' },
-  ongoing: { label: 'Ongoing', tone: 'bronze' },
-}
-
-export function ProjectStatusBadge({ status, onDark = false }: { status: ProjectStatus; onDark?: boolean }) {
-  const { label, tone } = projectStatus[status]
-  return <Badge label={label} tone={onDark ? 'onDark' : tone} accessibilityLabel={`Project status: ${label}`} />
-}
-
-/** Shown on every demo record so placeholder content is never mistaken for real work. */
-export function DemoBadge() {
+/** Marks temporary illustrative content so it is never mistaken for real BRIGHTHOMES work. */
+export function IllustrativeTag({ overImage = false }: { overImage?: boolean }) {
+  const { colors } = useTheme()
   return (
-    <View accessible accessibilityLabel="Demo content. Not a real BRIGHTHOMES project." style={styles.demo}>
-      <Text style={styles.demoText} maxFontSizeMultiplier={1.4}>
-        Demo
+    <View
+      accessible
+      accessibilityLabel="Illustrative content. Not a real BRIGHTHOMES project or listing."
+      style={[styles.tag, overImage ? styles.tagOverImage : { borderColor: colors.accent }]}
+    >
+      <Text style={[styles.tagText, { color: overImage ? onImage.text : colors.accentText }]} maxFontSizeMultiplier={1.4}>
+        Illustrative
       </Text>
     </View>
   )
@@ -60,11 +54,11 @@ export const requestStatusLabels: Record<EnquiryStatus | AppointmentStatus, stri
 }
 
 const requestTones: Record<EnquiryStatus | AppointmentStatus, Tone> = {
-  new: 'bronze',
-  in_progress: 'bronze',
+  new: 'accent',
+  in_progress: 'accent',
   resolved: 'success',
   closed: 'neutral',
-  requested: 'bronze',
+  requested: 'accent',
   confirmed: 'success',
   declined: 'danger',
   completed: 'neutral',
@@ -73,12 +67,14 @@ const requestTones: Record<EnquiryStatus | AppointmentStatus, Tone> = {
 
 export function RequestStatusBadge({ status }: { status: EnquiryStatus | AppointmentStatus }) {
   const label = requestStatusLabels[status]
-  return <Badge label={label} tone={requestTones[status]} accessibilityLabel={`Status: ${label}`} />
+  return <StatusLabel label={label} tone={requestTones[status]} accessibilityLabel={`Status: ${label}`} />
 }
 
 const styles = StyleSheet.create({
-  badge: { alignSelf: 'flex-start', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start' },
+  marker: { width: 6, height: 6 },
   text: { fontFamily: fonts.semibold, fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase' },
-  demo: { alignSelf: 'flex-start', backgroundColor: colors.bronzeLight, paddingHorizontal: 8, paddingVertical: 4 },
-  demoText: { fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase', color: colors.ink },
+  tag: { alignSelf: 'flex-start', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
+  tagOverImage: { borderColor: onImage.border, backgroundColor: onImage.chrome },
+  tagText: { fontFamily: fonts.semibold, fontSize: 9.5, letterSpacing: 1.8, textTransform: 'uppercase' },
 })

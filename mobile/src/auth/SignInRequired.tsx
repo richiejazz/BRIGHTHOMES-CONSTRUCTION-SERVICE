@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 
 import { Button } from '../components/ui/Button'
 import { EmptyState, ErrorState } from '../components/ui/States'
-import { colors, layout, space } from '../theme'
+import { layout, space, useTheme } from '../theme'
 import { useAuth, type AuthStatus } from './AuthProvider'
 
 /**
@@ -24,16 +24,18 @@ export function SignInRequired({ title, message, header, footer, children }: { t
 }
 
 function Fallback({ status, retry, title, message }: { status: AuthStatus; retry: () => void; title: string; message: string }) {
+  const { colors } = useTheme()
   if (status === 'loading' || status === 'bootstrapping') {
     return (
       <View style={styles.loading} accessible accessibilityLabel="Loading your account" accessibilityRole="progressbar">
-        <ActivityIndicator color={colors.bronzeDark} />
+        <ActivityIndicator color={colors.accent} />
       </View>
     )
   }
   if (status === 'unavailable') return <ErrorState message="Check your connection and try again." title="We couldn’t reach your account" onRetry={retry} style={styles.panel} />
   return (
     <EmptyState
+      eyebrow="Client account"
       title={title}
       message={message}
       style={styles.panel}

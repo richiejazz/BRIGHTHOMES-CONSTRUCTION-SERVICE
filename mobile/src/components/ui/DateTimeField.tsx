@@ -4,11 +4,11 @@ import { useState } from 'react'
 import { Platform, Pressable, StyleSheet, View } from 'react-native'
 
 import { formatTime, formatWeekdayDate, localDate, toIsoDate, toIsoTime } from '../../lib/format'
-import { colors, fonts, space } from '../../theme'
+import { useTheme } from '../../theme'
 import { BottomSheet } from './BottomSheet'
 import { Button } from './Button'
 import { Text } from './Text'
-import { FieldFrame, fieldStyles } from './TextField'
+import { FieldFrame, useFieldStyles } from './TextField'
 
 export type DateTimeFieldProps = {
   label: string
@@ -34,6 +34,8 @@ function toDate(mode: 'date' | 'time', value: string, minimumDate?: Date) {
 
 /** Native date or time picker: the system dialog on Android, a bottom sheet on iOS. */
 export function DateTimeField({ label, mode, value, onChange, placeholder, minimumDate, optional, hint, error }: DateTimeFieldProps) {
+  const field = useFieldStyles()
+  const { colors, scheme } = useTheme()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(() => toDate(mode, value, minimumDate))
   const display = value ? (mode === 'date' ? formatWeekdayDate(value) : formatTime(value)) : placeholder
@@ -57,12 +59,12 @@ export function DateTimeField({ label, mode, value, onChange, placeholder, minim
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${value ? display : 'not set'}`}
         accessibilityHint={mode === 'date' ? 'Opens a date picker' : 'Opens a time picker'}
-        style={({ pressed }) => [fieldStyles.control, styles.control, pressed && styles.pressed, error ? styles.invalid : null]}
+        style={({ pressed }) => [field.control, field.row, pressed && field.pressed, error ? field.invalid : null]}
       >
-        <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>
+        <Text style={[field.value, !value && field.placeholder]} numberOfLines={1}>
           {display}
         </Text>
-        <Icon size={18} color={colors.stone600} strokeWidth={1.6} />
+        <Icon size={18} color={colors.textMuted} strokeWidth={1.6} />
       </Pressable>
       {optional && value ? <Button variant="link" label={`Clear ${label.toLowerCase()}`} onPress={() => onChange('')} /> : null}
       {Platform.OS === 'ios' ? (
@@ -73,9 +75,9 @@ export function DateTimeField({ label, mode, value, onChange, placeholder, minim
               mode={mode}
               display={mode === 'date' ? 'inline' : 'spinner'}
               minimumDate={mode === 'date' ? minimumDate : undefined}
-              accentColor={colors.bronzeDark}
-              textColor={colors.ink}
-              themeVariant="light"
+              accentColor={colors.accentText}
+              textColor={colors.text}
+              themeVariant={scheme}
               onValueChange={(_event, date) => setDraft(date)}
             />
           </View>
@@ -94,10 +96,5 @@ export function DateTimeField({ label, mode, value, onChange, placeholder, minim
 }
 
 const styles = StyleSheet.create({
-  control: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
-  value: { flex: 1, fontFamily: fonts.regular, fontSize: 16, color: colors.ink },
-  placeholder: { color: colors.stone500 },
-  pressed: { backgroundColor: colors.bone },
-  invalid: { borderColor: colors.danger },
   picker: { alignItems: 'center' },
 })

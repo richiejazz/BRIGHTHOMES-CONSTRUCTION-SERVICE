@@ -6,8 +6,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "backgroundColor": "#f6f3ee",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#100F0D",
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -15,12 +15,20 @@
       "expo-image",
       "expo-font",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "BRIGHTHOMES uses your photo library only when you choose a profile photo.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 140,
           "resizeMode": "contain",
-          "backgroundColor": "#161513"
+          "backgroundColor": "#100F0D"
         }
       ]
     ],

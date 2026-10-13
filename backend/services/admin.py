@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.admin_actions import publish, unpublish
+
 from .models import Service
 
 
@@ -10,3 +12,4 @@ class ServiceAdmin(admin.ModelAdmin):
     search_fields = ["name", "short_description", "description"]
     ordering = ["display_order", "name"]
     prepopulated_fields = {"slug": ["name"]}
+    actions = [publish, unpublish]

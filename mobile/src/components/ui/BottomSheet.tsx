@@ -4,8 +4,9 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useReducedMotion } from '../../lib/useReducedMotion'
-import { colors, layout, space } from '../../theme'
+import { layout, makeStyles, space, useTheme } from '../../theme'
 import { Button, type ButtonVariant } from './Button'
+import { Eyebrow } from './Editorial'
 import { Text } from './Text'
 
 type SheetProps = {
@@ -14,29 +15,35 @@ type SheetProps = {
   title: string
   eyebrow?: string
   children?: ReactNode
+  /** Pinned below the scrolling content, for actions such as "Show results". */
+  footer?: ReactNode
 }
 
 /** A modal panel anchored to the bottom of the screen. Back button and backdrop both close it. */
-export function BottomSheet({ visible, onClose, title, eyebrow, children }: SheetProps) {
+export function BottomSheet({ visible, onClose, title, eyebrow, children, footer }: SheetProps) {
   const insets = useSafeAreaInsets()
   const reduced = useReducedMotion()
+  const styles = useStyles()
+  const { colors } = useTheme()
   return (
-    <Modal visible={visible} transparent animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType={reduced ? 'none' : 'slide'} onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
         <View accessibilityViewIsModal style={[styles.sheet, { paddingBottom: insets.bottom + space.xl }]}>
+          <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              {eyebrow ? <Text variant="eyebrow">{eyebrow}</Text> : null}
+              {eyebrow ? <Eyebrow label={eyebrow} /> : null}
               <Text variant="title">{title}</Text>
             </View>
             <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} style={styles.close}>
-              <X size={22} color={colors.ink} strokeWidth={1.5} />
+              <X size={22} color={colors.text} strokeWidth={1.4} />
             </Pressable>
           </View>
           <ScrollView bounces={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
             {children}
           </ScrollView>
+          {footer ? <View style={styles.footer}>{footer}</View> : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -56,6 +63,7 @@ type ConfirmProps = {
 
 /** Confirmation for actions with consequences, such as signing out. */
 export function ConfirmSheet({ visible, title, message, confirmLabel, confirmVariant = 'primary', cancelLabel = 'Cancel', onConfirm, onCancel }: ConfirmProps) {
+  const styles = useStyles()
   return (
     <BottomSheet visible={visible} onClose={onCancel} title={title}>
       <Text variant="body">{message}</Text>
@@ -67,13 +75,17 @@ export function ConfirmSheet({ visible, title, message, confirmLabel, confirmVar
   )
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.scrim },
-  sheet: { backgroundColor: colors.paper, borderTopWidth: 2, borderTopColor: colors.bronze, maxHeight: '88%' },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.lg, paddingHorizontal: layout.gutter, paddingTop: space.xl, paddingBottom: space.md },
-  headerCopy: { flex: 1, gap: space.sm },
-  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -10, marginTop: -8 },
-  body: { paddingHorizontal: layout.gutter, gap: space.lg },
-  actions: { gap: space.md, marginTop: space.sm },
-})
+const useStyles = makeStyles((c) =>
+  StyleSheet.create({
+    root: { flex: 1, justifyContent: 'flex-end' },
+    backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: c.scrim },
+    sheet: { backgroundColor: c.elevated, maxHeight: '90%', width: '100%', maxWidth: layout.maxWidth, alignSelf: 'center' },
+    handle: { alignSelf: 'center', width: 36, height: 3, backgroundColor: c.border, marginTop: space.md },
+    header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.lg, paddingHorizontal: layout.gutter, paddingTop: space.lg, paddingBottom: space.lg },
+    headerCopy: { flex: 1, gap: space.sm },
+    close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -10, marginTop: -6 },
+    body: { paddingHorizontal: layout.gutter, gap: space.lg, paddingBottom: space.sm },
+    footer: { paddingHorizontal: layout.gutter, paddingTop: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+    actions: { gap: space.md, marginTop: space.sm },
+  }),
+)

@@ -3,6 +3,7 @@ from django.db import transaction
 
 from dashboard.models import Achievement
 from projects.models import ProjectCategory
+from properties.models import PropertyCategory
 from services.models import Service
 
 # Verified BRIGHTHOMES company content. Existing records are never overwritten,
@@ -29,14 +30,22 @@ CATEGORIES = [
     ("real-estate", "Real Estate"),
     ("other", "Other"),
 ]
+PROPERTY_TYPES = [
+    ("house", "House"),
+    ("apartment", "Apartment"),
+    ("land", "Land"),
+    ("commercial", "Commercial"),
+    ("estate-development", "Estate / Development"),
+    ("other", "Other"),
+]
 
 
 class Command(BaseCommand):
-    help = "Create the verified BRIGHTHOMES services, achievements and project categories. Safe to re-run."
+    help = "Create the verified BRIGHTHOMES services, achievements, project categories and property types. Safe to re-run."
 
     @transaction.atomic
     def handle(self, *args, **options):
-        created = {"services": 0, "achievements": 0, "categories": 0}
+        created = {"services": 0, "achievements": 0, "categories": 0, "property types": 0}
         for order, (slug, name, short_description, description) in enumerate(SERVICES, start=1):
             _, was_created = Service.objects.get_or_create(
                 slug=slug,
@@ -49,5 +58,8 @@ class Command(BaseCommand):
         for order, (slug, name) in enumerate(CATEGORIES, start=1):
             _, was_created = ProjectCategory.objects.get_or_create(slug=slug, defaults={"name": name, "display_order": order})
             created["categories"] += was_created
+        for order, (slug, name) in enumerate(PROPERTY_TYPES, start=1):
+            _, was_created = PropertyCategory.objects.get_or_create(slug=slug, defaults={"name": name, "display_order": order})
+            created["property types"] += was_created
         summary = ", ".join(f"{count} {kind}" for kind, count in created.items())
         self.stdout.write(self.style.SUCCESS(f"Company content ready (created {summary})."))

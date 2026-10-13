@@ -27,7 +27,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ["id", "title", "slug", "summary", "description", "category", "category_id", "status", "is_published", "is_demo", "location", "start_date", "end_date", "services", "images", "created_at", "updated_at"]
+        fields = ["id", "title", "slug", "summary", "description", "category", "category_id", "status", "is_published", "is_featured", "is_demo", "location", "start_date", "end_date", "services", "images", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at", "is_demo"]
 
     def validate_category_id(self, category):
@@ -49,8 +49,7 @@ class ProjectSummarySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(ProjectImageSerializer(allow_null=True))
     def get_cover_image(self, project):
-        images = list(project.images.all())
-        cover = next((image for image in images if image.is_cover), images[0] if images else None)
+        cover = project.cover_image
         return ProjectImageSerializer(cover, context=self.context).data if cover else None
 
 

@@ -14,3 +14,18 @@ class SavedProject(models.Model):
 
     def __str__(self):
         return f"{self.user} saved {self.project}"
+
+
+class SavedProperty(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_properties")
+    property = models.ForeignKey("properties.Property", on_delete=models.CASCADE, related_name="saved_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name_plural = "saved properties"
+        constraints = [models.UniqueConstraint(fields=["user", "property"], name="unique_saved_property_per_user")]
+
+    def __str__(self):
+        return f"{self.user} saved {self.property}"

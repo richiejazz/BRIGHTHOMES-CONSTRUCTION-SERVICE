@@ -2,10 +2,10 @@ import { Check, ChevronDown } from 'lucide-react-native'
 import { useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors, fonts, space } from '../../theme'
+import { fonts, makeStyles, useTheme } from '../../theme'
 import { BottomSheet } from './BottomSheet'
 import { Text } from './Text'
-import { FieldFrame, fieldStyles } from './TextField'
+import { FieldFrame, useFieldStyles } from './TextField'
 
 export type SelectOption = { value: string; label: string }
 
@@ -23,6 +23,9 @@ type Props = {
 
 /** A select control that opens its options in a bottom sheet. */
 export function SelectField({ label, value, options, onChange, placeholder, optional, hint, error, disabled }: Props) {
+  const field = useFieldStyles()
+  const styles = useStyles()
+  const { colors } = useTheme()
   const [open, setOpen] = useState(false)
   const selected = options.find((option) => option.value === value)
   return (
@@ -34,12 +37,12 @@ export function SelectField({ label, value, options, onChange, placeholder, opti
         accessibilityLabel={`${label}: ${selected?.label ?? placeholder}`}
         accessibilityHint="Opens a list of options"
         accessibilityState={{ disabled: Boolean(disabled), expanded: open }}
-        style={({ pressed }) => [fieldStyles.control, styles.control, pressed && styles.pressed, error ? styles.invalid : null, disabled && styles.disabled]}
+        style={({ pressed }) => [field.control, field.row, pressed && field.pressed, error ? field.invalid : null, disabled && field.disabled]}
       >
-        <Text style={[styles.value, !selected && styles.placeholder]} numberOfLines={1}>
+        <Text style={[field.value, !selected && field.placeholder]} numberOfLines={1}>
           {selected?.label ?? placeholder}
         </Text>
-        <ChevronDown size={18} color={colors.stone600} strokeWidth={1.6} />
+        <ChevronDown size={18} color={colors.textMuted} strokeWidth={1.6} />
       </Pressable>
       <BottomSheet visible={open} onClose={() => setOpen(false)} title={label}>
         <View accessibilityRole="radiogroup">
@@ -54,10 +57,10 @@ export function SelectField({ label, value, options, onChange, placeholder, opti
                   onChange(option.value)
                   setOpen(false)
                 }}
-                style={({ pressed }) => [styles.option, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.option, pressed && field.pressed]}
               >
                 <Text style={[styles.optionText, active && styles.optionActive]}>{option.label}</Text>
-                {active ? <Check size={18} color={colors.bronzeDark} strokeWidth={2} /> : null}
+                {active ? <Check size={18} color={colors.accentText} strokeWidth={2} /> : null}
               </Pressable>
             )
           })}
@@ -67,14 +70,10 @@ export function SelectField({ label, value, options, onChange, placeholder, opti
   )
 }
 
-const styles = StyleSheet.create({
-  control: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
-  value: { flex: 1, fontFamily: fonts.regular, fontSize: 16, color: colors.ink },
-  placeholder: { color: colors.stone500 },
-  pressed: { backgroundColor: colors.bone },
-  invalid: { borderColor: colors.danger },
-  disabled: { opacity: 0.5 },
-  option: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: colors.stone200 },
-  optionText: { fontFamily: fonts.regular, fontSize: 16, color: colors.ink, flex: 1 },
-  optionActive: { fontFamily: fonts.semibold },
-})
+const useStyles = makeStyles((c) =>
+  StyleSheet.create({
+    option: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+    optionText: { fontFamily: fonts.regular, fontSize: 16, color: c.text, flex: 1 },
+    optionActive: { fontFamily: fonts.semibold },
+  }),
+)

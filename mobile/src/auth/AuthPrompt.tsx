@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 import { BottomSheet } from '../components/ui/BottomSheet'
@@ -43,9 +43,15 @@ export function useAuthPrompt() {
   return context
 }
 
-export const savePrompt: Prompt = {
-  title: 'Sign in to save projects',
-  message: 'Create a free client account or sign in to keep a shortlist of projects you’re interested in.',
+export const savePrompts: Record<'projects' | 'properties', Prompt> = {
+  projects: {
+    title: 'Sign in to save projects',
+    message: 'Create a free client account or sign in to keep a shortlist of projects you’re interested in.',
+  },
+  properties: {
+    title: 'Sign in to save properties',
+    message: 'Create a free client account or sign in to keep a shortlist of properties you’d like to follow up on.',
+  },
 }
 
 const styles = StyleSheet.create({

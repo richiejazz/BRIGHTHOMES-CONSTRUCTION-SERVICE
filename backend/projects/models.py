@@ -1,5 +1,8 @@
 from django.db import models
 
+from core.models import GalleryImage, pick_cover
+from core.validators import validate_gallery_image_size
+
 
 class ProjectCategory(models.Model):
     name = models.CharField(max_length=120, unique=True)
@@ -28,7 +31,8 @@ class Project(models.Model):
     category = models.ForeignKey(ProjectCategory, on_delete=models.PROTECT, related_name="projects")
     status = models.CharField(max_length=16, choices=Status.choices)
     is_published = models.BooleanField(default=False)
-    is_demo = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False, help_text="Featured projects lead the selected work on the website and app.")
+    is_demo = models.BooleanField(default=False, help_text="Illustrative or placeholder content that is not a real BRIGHTHOMES project.")
     location = models.CharField(max_length=180, blank=True)
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
@@ -42,19 +46,19 @@ class Project(models.Model):
     def __str__(self):
         return self.title
 
+    @property
+    def cover_image(self):
+        return pick_cover(self.images.all())
 
-class ProjectImage(models.Model):
+
+class ProjectImage(GalleryImage):
+    gallery_field = "project"
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="projects/%Y/%m/")
-    alt_text = models.CharField(max_length=180)
-    caption = models.CharField(max_length=300, blank=True)
-    display_order = models.PositiveIntegerField(default=0)
-    is_cover = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    image = models.ImageField(upload_to="projects/%Y/%m/", validators=[validate_gallery_image_size])
 
-    class Meta:
-        ordering = ["display_order", "created_at"]
+    class Meta(GalleryImage.Meta):
+        pass
 
     def __str__(self):
         return f"{self.project.title} image"

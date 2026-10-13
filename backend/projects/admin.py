@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.admin_actions import feature, publish, unfeature, unpublish
+
 from .models import Project, ProjectCategory, ProjectImage
 
 
@@ -19,14 +21,15 @@ class ProjectImageInline(admin.TabularInline):
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ["title", "category", "status", "is_published", "is_demo", "created_at"]
-    list_filter = ["status", "is_published", "is_demo", "category"]
+    list_display = ["title", "category", "status", "is_published", "is_featured", "is_demo", "created_at"]
+    list_filter = ["status", "is_published", "is_featured", "is_demo", "category"]
     search_fields = ["title", "summary", "description", "location"]
     ordering = ["-created_at"]
     prepopulated_fields = {"slug": ["title"]}
     filter_horizontal = ["services"]
     inlines = [ProjectImageInline]
-    fieldsets = [(None, {"fields": ["title", "slug", "summary", "description", "category", "services"]}), ("Publication", {"fields": ["status", "is_published", "is_demo"]}), ("Project details", {"fields": ["location", "start_date", "end_date"]})]
+    actions = [publish, unpublish, feature, unfeature]
+    fieldsets = [(None, {"fields": ["title", "slug", "summary", "description", "category", "services"]}), ("Publication", {"fields": ["status", "is_published", "is_featured", "is_demo"]}), ("Project details", {"fields": ["location", "start_date", "end_date"]})]
 
 
 @admin.register(ProjectImage)

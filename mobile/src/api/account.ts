@@ -2,13 +2,14 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { apiClient } from './client'
 import { fetchAll, nextPageParam } from './content'
-import type { Appointment, AppointmentInput, Enquiry, EnquiryInput, Paginated, ProfileInput, RegisterInput, SavedProject, TokenPair, User } from './types'
+import type { Appointment, AppointmentInput, Enquiry, EnquiryInput, Paginated, ProfileInput, RegisterInput, SavedProject, SavedProperty, TokenPair, User } from './types'
 
 export const accountKeys = {
   me: ['me'] as const,
-  saved: ['saved-projects'] as const,
-  savedList: ['saved-projects', 'list'] as const,
-  savedIndex: ['saved-projects', 'index'] as const,
+  allSaved: ['saved'] as const,
+  saved: (kind: SavedKind) => ['saved', kind] as const,
+  savedList: (kind: SavedKind) => ['saved', kind, 'list'] as const,
+  savedIndex: (kind: SavedKind) => ['saved', kind, 'index'] as const,
   enquiries: ['enquiries'] as const,
   enquiryList: ['enquiries', 'list'] as const,
   enquiry: (id: number) => ['enquiries', 'detail', id] as const,
@@ -18,7 +19,7 @@ export const accountKeys = {
 }
 
 /** Every query that holds the signed-in user's own data, dropped on sign-out. */
-export const privateKeys = [accountKeys.me, accountKeys.saved, accountKeys.enquiries, accountKeys.appointments]
+export const privateKeys = [accountKeys.me, accountKeys.allSaved, accountKeys.enquiries, accountKeys.appointments]
 
 // --- Authentication (used by AuthProvider) ------------------------------------------------
 
@@ -36,57 +37,96 @@ export function useUpdateProfile() {
   })
 }
 
-// --- Saved projects ----------------------------------------------------------------------
+/** A prepared image ready to upload: a native file URI, or a Blob in the web preview. */
+export type UploadableImage = { uri: string; name: string; type: string; blob?: Blob }
 
-export function useSavedProjects(enabled: boolean) {
+/** Upload or replace the profile photo. The server crops it to a 512px square JPEG. */
+export function useUploadAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (image: UploadableImage) => {
+      const form = new FormData()
+      // React Native's FormData accepts a { uri, name, type } descriptor for local files.
+      if (image.blob) form.append('avatar', image.blob, image.name)
+      else form.append('avatar', { uri: image.uri, name: image.name, type: image.type } as unknown as Blob)
+      // The client defaults to JSON, which would make Axios serialise the form; send it as multipart.
+      return (await apiClient.put<User>('/auth/me/avatar/', form, { headers: { 'Content-Type': 'multipart/form-data' } })).data
+    },
+    onSuccess: (user) => queryClient.setQueryData(accountKeys.me, user),
+  })
+}
+
+export function useRemoveAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => (await apiClient.delete<User>('/auth/me/avatar/')).data,
+    onSuccess: (user) => queryClient.setQueryData(accountKeys.me, user),
+  })
+}
+
+// --- Saved projects and properties --------------------------------------------------------
+
+export type SavedKind = 'projects' | 'properties'
+
+const savedEndpoints: Record<SavedKind, { url: string; field: 'project' | 'property' }> = {
+  projects: { url: '/saved-projects/', field: 'project' },
+  properties: { url: '/saved-properties/', field: 'property' },
+}
+
+type SavedRecord<K extends SavedKind> = K extends 'projects' ? SavedProject : SavedProperty
+
+export function useSavedList<K extends SavedKind>(kind: K, enabled: boolean) {
   return useInfiniteQuery({
-    queryKey: accountKeys.savedList,
-    queryFn: async ({ pageParam }) => (await apiClient.get<Paginated<SavedProject>>('/saved-projects/', { params: { page: pageParam } })).data,
+    queryKey: accountKeys.savedList(kind),
+    queryFn: async ({ pageParam }) => (await apiClient.get<Paginated<SavedRecord<K>>>(savedEndpoints[kind].url, { params: { page: pageParam } })).data,
     initialPageParam: 1,
     getNextPageParam: nextPageParam,
     enabled,
   })
 }
 
-/** project id → saved record id, for every project the user has saved. */
+/** Saved item id (project or property) → saved record id, for everything the user has saved. */
 export type SavedIndex = Record<number, number>
 
-export function useSavedIndex(enabled: boolean) {
+export function useSavedIndex(kind: SavedKind, enabled: boolean) {
+  const { url, field } = savedEndpoints[kind]
   return useQuery({
-    queryKey: accountKeys.savedIndex,
-    queryFn: async () => Object.fromEntries((await fetchAll<SavedProject>('/saved-projects/')).map((saved) => [saved.project, saved.id])) as SavedIndex,
+    queryKey: accountKeys.savedIndex(kind),
+    queryFn: async () => Object.fromEntries((await fetchAll<Record<string, number>>(url)).map((saved) => [saved[field], saved.id])) as SavedIndex,
     enabled,
   })
 }
 
-/** Save or unsave a project, updating the saved index optimistically. */
-export function useToggleSavedProject() {
+/** Save or unsave a project or property, updating the saved index optimistically. */
+export function useToggleSaved(kind: SavedKind) {
   const queryClient = useQueryClient()
+  const { url, field } = savedEndpoints[kind]
+  const indexKey = accountKeys.savedIndex(kind)
   return useMutation({
-    mutationFn: async ({ projectId, savedId }: { projectId: number; savedId?: number }) => {
+    mutationFn: async ({ itemId, savedId }: { itemId: number; savedId?: number }) => {
       if (savedId) {
-        await apiClient.delete(`/saved-projects/${savedId}/`)
-        return { projectId, savedId: undefined }
+        await apiClient.delete(`${url}${savedId}/`)
+        return { itemId, savedId: undefined }
       }
-      const { data } = await apiClient.post<SavedProject>('/saved-projects/', { project: projectId })
-      return { projectId, savedId: data.id }
+      const { data } = await apiClient.post<{ id: number }>(url, { [field]: itemId })
+      return { itemId, savedId: data.id }
     },
-    onMutate: async ({ projectId, savedId }) => {
-      await queryClient.cancelQueries({ queryKey: accountKeys.savedIndex })
-      const previous = queryClient.getQueryData<SavedIndex>(accountKeys.savedIndex)
-      queryClient.setQueryData<SavedIndex>(accountKeys.savedIndex, (index = {}) => {
+    onMutate: async ({ itemId, savedId }) => {
+      await queryClient.cancelQueries({ queryKey: indexKey })
+      const previous = queryClient.getQueryData<SavedIndex>(indexKey)
+      queryClient.setQueryData<SavedIndex>(indexKey, (index = {}) => {
         const next = { ...index }
         // -1 marks an optimistic save until the server returns the record id.
-        if (savedId) delete next[projectId]
-        else next[projectId] = -1
+        if (savedId) delete next[itemId]
+        else next[itemId] = -1
         return next
       })
       return { previous }
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(accountKeys.savedIndex, context.previous)
+      if (context?.previous) queryClient.setQueryData(indexKey, context.previous)
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: accountKeys.saved }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: accountKeys.saved(kind) }),
   })
 }
 

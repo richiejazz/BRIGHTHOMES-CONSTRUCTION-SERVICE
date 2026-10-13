@@ -1,0 +1,117 @@
+{
+  "_about": "Temporary illustrative content used until verified BRIGHTHOMES projects and listings are supplied. Every record is created with is_demo=true. Photographs are free-to-use Unsplash images (https://unsplash.com/license) downloaded into media storage by `manage.py seed_illustrative_content`; they do not show BRIGHTHOMES work. No names, locations, prices, clients, dates or specifications are invented. Replace or unpublish these records in Django Admin when real content is available.",
+  "properties": [
+    {
+      "slug": "illustrative-contemporary-villa",
+      "title": "Contemporary Villa",
+      "category": "house",
+      "summary": "An illustrative example of a contemporary detached home, shown while verified listings are prepared.",
+      "is_featured": true,
+      "images": [
+        { "unsplash_id": "Id7u0EkTjBE", "photographer": "John Fornander", "alt_text": "A modern white villa with a swimming pool and outdoor lounge area" },
+        { "unsplash_id": "LqGf5UvHCZ8", "photographer": "Aalo Lens", "alt_text": "A modern living room with large windows and comfortable seating" }
+      ]
+    },
+    {
+      "slug": "illustrative-apartment-residences",
+      "title": "Apartment Residences",
+      "category": "apartment",
+      "summary": "An illustrative example of a residential apartment building, shown while verified listings are prepared.",
+      "is_featured": true,
+      "images": [
+        { "unsplash_id": "XCCAVA3BjhM", "photographer": "Seyi Ariyo", "alt_text": "A brown multi-storey apartment building in daylight" },
+        { "unsplash_id": "fQgYAnWVFeo", "photographer": "Huy Nguyen", "alt_text": "An open-plan living room with leather armchairs and a black coffee table" }
+      ]
+    },
+    {
+      "slug": "illustrative-land-plots",
+      "title": "Land Plots",
+      "category": "land",
+      "summary": "An illustrative example of land for development, shown while verified listings are prepared.",
+      "is_featured": true,
+      "images": [
+        { "unsplash_id": "u_lx7HUTQgI", "photographer": "Paul Addo", "alt_text": "Aerial view of green land marked into plots near the coast" },
+        { "unsplash_id": "-BTDA9TKxfg", "photographer": "Paul Addo", "alt_text": "Aerial view of a green hillside with scattered buildings and roads" }
+      ]
+    },
+    {
+      "slug": "illustrative-pavilion-house",
+      "title": "Pavilion House",
+      "category": "house",
+      "summary": "An illustrative example of a single-storey home with glazed living spaces, shown while verified listings are prepared.",
+      "is_featured": true,
+      "images": [
+        { "unsplash_id": "b_79nOqf95I", "photographer": "Florian Schmidinger", "alt_text": "A modern house with glass walls beside a swimming pool on a sunny day" },
+        { "unsplash_id": "rEJxpBskj3Q", "photographer": "Roberto Nickson", "alt_text": "A grey chaise couch beside a tall window in a double-height living room" }
+      ]
+    },
+    {
+      "slug": "illustrative-commercial-building",
+      "title": "Commercial Office Building",
+      "category": "commercial",
+      "summary": "An illustrative example of a commercial office building, shown while verified listings are prepared.",
+      "is_featured": false,
+      "images": [
+        { "unsplash_id": "Wm8opOd-MDE", "photographer": "Kenrick Baksh", "alt_text": "A curved glass office facade against a clear sky" },
+        { "unsplash_id": "zIsBxW3incc", "photographer": "Clark Van Der Beken", "alt_text": "A white building facade with a regular grid of windows under a blue sky" }
+      ]
+    },
+    {
+      "slug": "illustrative-residential-estate",
+      "title": "Residential Estate",
+      "category": "estate-development",
+      "summary": "An illustrative example of a residential development, shown while verified listings are prepared.",
+      "is_featured": false,
+      "images": [
+        { "unsplash_id": "xcnGUEy6rXc", "photographer": "Chris Weiher", "alt_text": "Aerial view of apartment buildings surrounded by trees and greenery" },
+        { "unsplash_id": "4453DIQWtsQ", "photographer": "Tobias Wilden", "alt_text": "A modern apartment building with glass balconies against a soft pink sky" }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "slug": "illustrative-contemporary-residence",
+      "title": "Contemporary Residence",
+      "category": "residential",
+      "summary": "Illustrative architectural photography of a contemporary home, shown while BRIGHTHOMES project photography is prepared.",
+      "is_featured": true,
+      "images": [
+        { "unsplash_id": "2d4lAQAlbDA", "photographer": "Frames For Your Heart", "alt_text": "A white and grey contemporary house beside a swimming pool under a clear sky" },
+        { "unsplash_id": "mR1CIDduGLc", "photographer": "Frames For Your Heart", "alt_text": "A white contemporary house with a pool terrace under a blue sky" }
+      ]
+    },
+    {
+      "slug": "illustrative-commercial-facade",
+      "title": "Commercial Facade",
+      "category": "commercial",
+      "summary": "Illustrative architectural photography of commercial buildings, shown while BRIGHTHOMES project photography is prepared.",
+      "is_featured": true,
+      "images": [
+        { "unsplash_id": "HT45CoenVds", "photographer": "Ricardo Gomez Angel", "alt_text": "Looking up between white buildings with horizontal louvres" },
+        { "unsplash_id": "j7q-Z9DV3zw", "photographer": "Nathan Waters", "alt_text": "A tower crane above a building under construction at dusk" }
+      ]
+    },
+    {
+      "slug": "illustrative-interior-renovation",
+      "title": "Interior Renovation",
+      "category": "renovation",
+      "summary": "Illustrative photography of renovation work in progress, shown while BRIGHTHOMES project photography is prepared.",
+      "is_featured": false,
+      "images": [
+        { "unsplash_id": "biRt6RXejuk", "photographer": "Stefan Lehner", "alt_text": "A room under renovation with metal support props, debris and tools on the floor" },
+        { "unsplash_id": "ut6gWxh3oqQ", "photographer": "Jessica Hearn", "alt_text": "A hallway being renovated, with timber on the floor and a worker at the far end" }
+      ]
+    },
+    {
+      "slug": "illustrative-structural-works",
+      "title": "Structural Works",
+      "category": "other",
+      "summary": "Illustrative photography of structural construction and drawings, shown while BRIGHTHOMES project photography is prepared.",
+      "is_featured": false,
+      "images": [
+        { "unsplash_id": "PqRvLsjD_TU", "photographer": "Saad Salim", "alt_text": "Workers placing steel reinforcement on a construction site grid, seen from above" },
+        { "unsplash_id": "fNxmdlYHRm8", "photographer": "Marina Zvada", "alt_text": "Architectural drawings spread out on a surface" }
+      ]
+    }
+  ]
+}

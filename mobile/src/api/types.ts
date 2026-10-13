@@ -1,5 +1,5 @@
-// Shapes returned by the BRIGHTHOMES API (/api/v1/). Kept in sync with the backend serializers
-// and with website/src/api/types.ts.
+// Shapes returned by the BRIGHTHOMES API (/api/v1/). Kept in sync with the backend serializers;
+// website/src/api/types.ts covers the subset the website uses.
 
 export type Paginated<T> = {
   count: number
@@ -37,6 +37,8 @@ export type Project = {
   category: ProjectCategory
   status: ProjectStatus
   is_published: boolean
+  is_featured: boolean
+  /** Illustrative or placeholder content, never presented as real BRIGHTHOMES work. */
   is_demo: boolean
   location: string
   start_date: string | null
@@ -56,6 +58,47 @@ export type ProjectSummary = {
   is_published: boolean
   is_demo: boolean
   cover_image: ProjectImage | null
+}
+
+export type PropertyCategory = ProjectCategory
+
+export type ListingType = 'sale' | 'rent' | 'lease' | 'coming_soon'
+export type PriceDisplay = 'exact' | 'from' | 'on_request'
+export type PropertyStatus = 'available' | 'reserved' | 'sold' | 'rented' | 'coming_soon' | 'unavailable'
+
+/** Gallery images share one shape across projects and properties. */
+export type GalleryImage = ProjectImage
+
+export type Property = {
+  id: number
+  title: string
+  slug: string
+  summary: string
+  description: string
+  category: PropertyCategory
+  listing_type: ListingType
+  status: PropertyStatus
+  /** Decimal string in Naira; always null for the public when the price is on request. */
+  price: string | null
+  price_display: PriceDisplay
+  location: string
+  address: string
+  bedrooms: number | null
+  bathrooms: number | null
+  land_size: string
+  building_size: string
+  features: string[]
+  images: GalleryImage[]
+  is_featured: boolean
+  is_published: boolean
+  is_demo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type PropertySummary = Pick<Property, 'id' | 'slug' | 'title' | 'listing_type' | 'status' | 'price' | 'price_display' | 'location' | 'is_published' | 'is_demo'> & {
+  category: string
+  cover_image: GalleryImage | null
 }
 
 export type Service = {
@@ -91,6 +134,8 @@ type ClientRecord = {
   project_summary: ProjectSummary | null
   service: number | null
   service_summary: ServiceSummary | null
+  property: number | null
+  property_summary: PropertySummary | null
   created_at: string
   updated_at: string
 }
@@ -111,6 +156,7 @@ export type EnquiryInput = {
   message: string
   project?: number | null
   service?: number | null
+  property?: number | null
 }
 
 export type AppointmentInput = EnquiryInput & {
@@ -126,6 +172,13 @@ export type SavedProject = {
   created_at: string
 }
 
+export type SavedProperty = {
+  id: number
+  property: number
+  property_summary: PropertySummary
+  created_at: string
+}
+
 export type UserRole = 'client' | 'staff' | 'admin'
 
 export type User = {
@@ -133,11 +186,14 @@ export type User = {
   email: string
   first_name: string
   last_name: string
+  phone: string
+  /** Absolute URL of a 512px square photo, or null to show initials. */
+  avatar: string | null
   role: UserRole
   date_joined: string
 }
 
-export type ProfileInput = Pick<User, 'first_name' | 'last_name'>
+export type ProfileInput = Partial<Pick<User, 'first_name' | 'last_name' | 'phone'>>
 
 export type TokenPair = { access: string; refresh: string }
 

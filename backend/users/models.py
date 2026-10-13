@@ -32,6 +32,9 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.CLIENT)
+    phone = models.CharField(max_length=40, blank=True)
+    # Always a server-processed 512px square JPEG (see users/avatars.py).
+    avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = UserManager()

@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
 import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react'
 
 import { accountKeys, authApi, privateKeys } from '../api/account'
@@ -54,7 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!hydrated || sessionActive) return
     privateKeys.forEach((queryKey) => queryClient.removeQueries({ queryKey }))
     void queryClient.invalidateQueries({ queryKey: contentKeys.allProjects })
-    if (tokenStore.consumeExpiry()) toast.show({ tone: 'info', title: 'Your session has ended', message: 'Please sign in again to continue.' })
+    if (tokenStore.consumeExpiry()) {
+      toast.show({
+        tone: 'info',
+        title: 'Your session has ended',
+        message: 'For your security, please sign in again.',
+        action: { label: 'Sign in', onPress: () => router.push({ pathname: '/login', params: { reason: 'expired' } }) },
+      })
+    }
   }, [hydrated, sessionActive, queryClient, toast])
 
   const login = useCallback(

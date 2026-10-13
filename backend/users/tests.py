@@ -1,7 +1,12 @@
-from io import StringIO
+import shutil
+import tempfile
+from io import BytesIO, StringIO
+from unittest import mock
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -96,3 +101,73 @@ class SeedCompanyContentTestCase(TestCase):
         self.assertEqual(Service.objects.count(), 8)
         self.assertEqual(Achievement.objects.count(), 3)
         self.assertEqual(Service.objects.get(slug="renovation").short_description, "Edited in admin")
+
+
+AVATAR_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+def image_upload(fmt="JPEG", size=(1200, 900), name="me.jpg", content_type="image/jpeg"):
+    buffer = BytesIO()
+    Image.new("RGB", size, "teal").save(buffer, fmt)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type=content_type)
+
+
+@override_settings(MEDIA_ROOT=AVATAR_MEDIA_ROOT)
+class ProfileTestCase(TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(AVATAR_MEDIA_ROOT, ignore_errors=True)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user("profile@example.com", STRONG_PASSWORD, first_name="Ada", last_name="Client")
+        self.client.force_authenticate(self.user)
+
+    def upload(self, file):
+        return self.client.put("/api/v1/auth/me/avatar/", {"avatar": file}, format="multipart")
+
+    def test_phone_is_editable_and_validated(self):
+        response = self.client.patch("/api/v1/auth/me/", {"phone": "+234 802 557 7265"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["phone"], "+234 802 557 7265")
+        self.assertEqual(self.client.patch("/api/v1/auth/me/", {"phone": "call me"}, format="json").status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.client.patch("/api/v1/auth/me/", {"phone": ""}, format="json").data["phone"], "")
+
+    def test_avatar_is_stored_as_a_small_square_jpeg(self):
+        response = self.upload(image_upload("PNG", (1600, 900), "me.png", "image/png"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["avatar"].startswith("http://testserver/media/avatars/"))
+        self.user.refresh_from_db()
+        with Image.open(self.user.avatar) as stored:
+            self.assertEqual((stored.format, stored.size), ("JPEG", (512, 512)))
+        self.assertEqual(self.client.get("/api/v1/auth/me/").data["avatar"], response.data["avatar"])
+
+    def test_replacing_and_removing_the_avatar_cleans_up_files(self):
+        self.upload(image_upload())
+        self.user.refresh_from_db()
+        first = self.user.avatar.name
+        self.upload(image_upload())
+        self.user.refresh_from_db()
+        self.assertNotEqual(self.user.avatar.name, first)
+        self.assertFalse(self.user.avatar.storage.exists(first))
+        second = self.user.avatar.name
+        removed = self.client.delete("/api/v1/auth/me/avatar/")
+        self.assertEqual(removed.status_code, status.HTTP_200_OK)
+        self.assertIsNone(removed.data["avatar"])
+        self.assertFalse(self.user.avatar.storage.exists(second))
+
+    def test_invalid_avatars_are_rejected(self):
+        self.assertEqual(self.upload(SimpleUploadedFile("me.jpg", b"not an image", content_type="image/jpeg")).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.upload(image_upload("GIF", (40, 40), "me.gif", "image/gif")).status_code, status.HTTP_400_BAD_REQUEST)
+        with mock.patch("users.avatars.MAX_UPLOAD_BYTES", 10):
+            self.assertEqual(self.upload(image_upload()).status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.avatar)
+
+    def test_avatar_cannot_be_set_through_profile_patch_or_by_anonymous_users(self):
+        self.client.patch("/api/v1/auth/me/", {"avatar": "https://example.com/x.jpg"}, format="json")
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.avatar)
+        self.client.force_authenticate(None)
+        self.assertEqual(self.upload(image_upload()).status_code, status.HTTP_401_UNAUTHORIZED)

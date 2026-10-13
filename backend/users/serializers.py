@@ -2,14 +2,26 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from .avatars import process_avatar
 from .models import User
+
+PHONE_PATTERN = r"^[+\d][\d\s()-]{6,}$"
 
 
 class UserSerializer(serializers.ModelSerializer):
+    phone = serializers.RegexField(PHONE_PATTERN, max_length=40, required=False, allow_blank=True, error_messages={"invalid": "Please enter a valid phone number."})
+
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "role", "date_joined"]
-        read_only_fields = ["id", "email", "role", "date_joined"]
+        fields = ["id", "email", "first_name", "last_name", "phone", "avatar", "role", "date_joined"]
+        read_only_fields = ["id", "email", "avatar", "role", "date_joined"]
+
+
+class AvatarUploadSerializer(serializers.Serializer):
+    avatar = serializers.FileField()
+
+    def validate_avatar(self, upload):
+        return process_avatar(upload)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
