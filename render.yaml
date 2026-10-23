@@ -2,8 +2,8 @@
 #
 # Free-plan notes: the web service sleeps after 15 minutes without traffic, has no shell and no persistent
 # disk, so migrations and the (idempotent) seed commands run on every start, and uploaded/seeded images are
-# stored in Cloudinary (CLOUDINARY_URL). Secrets marked `sync: false` are entered in the Render dashboard
-# and are never committed.
+# stored in Cloudinary (CLOUDINARY_URL). The database is a free Neon PostgreSQL project (DATABASE_URL).
+# Secrets marked `sync: false` are entered in the Render dashboard and are never committed.
 services:
   - type: web
     name: brighthomes-api
@@ -28,11 +28,10 @@ services:
         value: "False"
       - key: SECURE_SSL_REDIRECT
         value: "True"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: brighthomes-db
-          property: connectionString
       # Entered in the dashboard (never committed):
+      # Neon PostgreSQL *direct* (non-pooled) connection string, with ?sslmode=require.
+      - key: DATABASE_URL
+        sync: false
       - key: CLOUDINARY_URL
         sync: false
       - key: CORS_ALLOWED_ORIGINS
@@ -42,8 +41,3 @@ services:
       # No SMTP account is configured for the demo: password-reset emails are written to the service log.
       - key: EMAIL_BACKEND
         value: django.core.mail.backends.console.EmailBackend
-
-databases:
-  - name: brighthomes-db
-    plan: free
-    databaseName: brighthomes
