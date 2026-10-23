@@ -4,10 +4,17 @@ import { scaledVariants, type as typeScale, useTheme, type ThemeColors, type Typ
 
 type Props = TextProps & { variant?: TypeVariant; color?: string }
 
-const headings: ReadonlySet<TypeVariant> = new Set(['hero', 'display', 'title', 'heading', 'subheading'])
+const headings: ReadonlySet<TypeVariant> = new Set(['hero', 'display', 'title', 'heading', 'subheading', 'tabTitle', 'greeting', 'detailTitle', 'authTitle', 'sectionHeader'])
+const muted: ReadonlySet<TypeVariant> = new Set(['meta', 'tabLabel'])
 
 const defaultColor = (variant: TypeVariant, colors: ThemeColors) =>
-  variant === 'eyebrow' ? colors.accentText : variant === 'body' || variant === 'small' || variant === 'lead' ? colors.textMuted : colors.text
+  variant === 'eyebrow' || variant === 'overline'
+    ? colors.accentText
+    : variant === 'body' || variant === 'small' || variant === 'lead'
+      ? colors.textMuted
+      : muted.has(variant)
+        ? colors.textSubtle
+        : colors.text
 
 /** Text set in one of the BRIGHTHOMES type styles, coloured for the active theme. */
 export function Text({ variant = 'body', color, style, ...props }: Props) {

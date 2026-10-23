@@ -1,5 +1,5 @@
-import { CormorantGaramond_400Regular, CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold } from '@expo-google-fonts/cormorant-garamond'
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter'
+import { CormorantGaramond_400Regular, CormorantGaramond_400Regular_Italic, CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold } from '@expo-google-fonts/cormorant-garamond'
+import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope'
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import axios from 'axios'
 import { useFonts } from 'expo-font'
@@ -41,11 +41,14 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     CormorantGaramond_400Regular,
     CormorantGaramond_500Medium,
+    CormorantGaramond_400Regular_Italic,
     CormorantGaramond_500Medium_Italic,
     CormorantGaramond_600SemiBold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
   })
   return (
     <QueryClientProvider client={queryClient}>
