@@ -34,6 +34,7 @@ class Project(models.Model):
     is_featured = models.BooleanField(default=False, help_text="Featured projects lead the selected work on the website and app.")
     is_demo = models.BooleanField(default=False, help_text="Illustrative or placeholder content that is not a real BRIGHTHOMES project.")
     location = models.CharField(max_length=180, blank=True)
+    building_type = models.CharField(max_length=120, blank=True, help_text="For example Detached residence or Mid-rise apartments.")
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     services = models.ManyToManyField("services.Service", related_name="projects", blank=True)

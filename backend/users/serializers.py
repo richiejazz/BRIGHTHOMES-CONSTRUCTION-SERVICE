@@ -26,10 +26,12 @@ class AvatarUploadSerializer(serializers.Serializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False, style={"input_type": "password"})
+    # Optional; international numbers are accepted (spec: diaspora-friendly).
+    phone = serializers.RegexField(PHONE_PATTERN, max_length=40, required=False, allow_blank=True, error_messages={"invalid": "Please enter a valid phone number."})
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "password"]
+        fields = ["id", "email", "first_name", "last_name", "phone", "password"]
         read_only_fields = ["id"]
         # Uniqueness is checked case-insensitively in validate_email instead of the default validator.
         extra_kwargs = {"email": {"validators": []}, "first_name": {"required": True, "allow_blank": False}, "last_name": {"required": True, "allow_blank": False}}
@@ -50,3 +52,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(role=User.Role.CLIENT, **validated_data)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(trim_whitespace=False, style={"input_type": "password"})

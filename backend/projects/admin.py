@@ -29,7 +29,7 @@ class ProjectAdmin(admin.ModelAdmin):
     filter_horizontal = ["services"]
     inlines = [ProjectImageInline]
     actions = [publish, unpublish, feature, unfeature]
-    fieldsets = [(None, {"fields": ["title", "slug", "summary", "description", "category", "services"]}), ("Publication", {"fields": ["status", "is_published", "is_featured", "is_demo"]}), ("Project details", {"fields": ["location", "start_date", "end_date"]})]
+    fieldsets = [(None, {"fields": ["title", "slug", "summary", "description", "category", "services"]}), ("Publication", {"fields": ["status", "is_published", "is_featured", "is_demo"]}), ("Project details", {"fields": ["building_type", "location", "start_date", "end_date"]})]
 
 
 @admin.register(ProjectImage)

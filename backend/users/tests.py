@@ -171,3 +171,64 @@ class ProfileTestCase(TestCase):
         self.assertFalse(self.user.avatar)
         self.client.force_authenticate(None)
         self.assertEqual(self.upload(image_upload()).status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+@override_settings(FRONTEND_URL="https://brighthomes.example", EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class PasswordResetTestCase(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()  # The request endpoint is throttled per client.
+        self.client = APIClient()
+        self.user = User.objects.create_user("reset.me@example.com", STRONG_PASSWORD, first_name="Ada")
+
+    def request_reset(self, email):
+        return self.client.post("/api/v1/auth/password-reset/", {"email": email}, format="json")
+
+    def link_parts(self):
+        from django.core import mail
+
+        link = next(word for word in mail.outbox[-1].body.split() if word.startswith("https://brighthomes.example/reset-password/"))
+        uid, token = link.rstrip("/").split("/")[-2:]
+        return link, uid, token
+
+    def test_request_sends_a_website_link_and_never_reveals_whether_the_account_exists(self):
+        from django.core import mail
+
+        known = self.request_reset("RESET.me@example.com")
+        unknown = self.request_reset("nobody@example.com")
+        self.assertEqual(known.status_code, status.HTTP_200_OK)
+        self.assertEqual(known.data, unknown.data)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["reset.me@example.com"])
+        link, _, _ = self.link_parts()
+        self.assertTrue(link.startswith("https://brighthomes.example/reset-password/"))
+
+    def test_confirm_sets_password_once_and_rejects_bad_links_and_weak_passwords(self):
+        self.request_reset("reset.me@example.com")
+        _, uid, token = self.link_parts()
+        confirm = "/api/v1/auth/password-reset/confirm/"
+        self.assertEqual(self.client.post(confirm, {"uid": uid, "token": "bad-token", "password": "new-strong-pass-2026"}, format="json").status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.client.post(confirm, {"uid": "junk", "token": token, "password": "new-strong-pass-2026"}, format="json").status_code, status.HTTP_400_BAD_REQUEST)
+        weak = self.client.post(confirm, {"uid": uid, "token": token, "password": "12345678"}, format="json")
+        self.assertEqual(weak.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password", weak.data)
+        ok = self.client.post(confirm, {"uid": uid, "token": token, "password": "new-strong-pass-2026"}, format="json")
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("new-strong-pass-2026"))
+        # The link is single-use: the password change invalidates the token.
+        again = self.client.post(confirm, {"uid": uid, "token": token, "password": "another-strong-pass-2026"}, format="json")
+        self.assertEqual(again.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_request_is_throttled(self):
+        responses = [self.request_reset("nobody@example.com").status_code for _ in range(6)]
+        self.assertEqual(responses[:5], [status.HTTP_200_OK] * 5)
+        self.assertEqual(responses[5], status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_register_accepts_optional_international_phone(self):
+        data = {"email": "abroad@example.com", "first_name": "Ada", "last_name": "Client", "password": STRONG_PASSWORD, "phone": "+44 20 7946 0958"}
+        self.assertEqual(self.client.post("/api/v1/auth/register/", data, format="json").status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.get(email="abroad@example.com").phone, "+44 20 7946 0958")
+        bad = self.client.post("/api/v1/auth/register/", {**data, "email": "bad@example.com", "phone": "call me"}, format="json")
+        self.assertIn("phone", bad.data)

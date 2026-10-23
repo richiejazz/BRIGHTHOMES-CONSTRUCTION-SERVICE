@@ -149,10 +149,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_staff:
-            return Appointment.objects.select_related("project__category", "service", "property__category").prefetch_related("project__images", "property__images")
+            return Appointment.objects.select_related("project__category", "service", "property__category").prefetch_related("project__images", "property__images", "services")
         if not self.request.user.is_authenticated:
             return Appointment.objects.none()
-        return Appointment.objects.filter(user=self.request.user).select_related("project__category", "service", "property__category").prefetch_related("project__images", "property__images")
+        return Appointment.objects.filter(user=self.request.user).select_related("project__category", "service", "property__category").prefetch_related("project__images", "property__images", "services")
 
 
 class SavedProjectViewSet(viewsets.ModelViewSet):

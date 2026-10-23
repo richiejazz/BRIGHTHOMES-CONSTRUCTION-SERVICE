@@ -12,10 +12,11 @@ class EnquirySerializer(serializers.ModelSerializer):
     project_summary = ProjectSummarySerializer(source="project", read_only=True)
     service_summary = ServiceSummarySerializer(source="service", read_only=True)
     property_summary = PropertySummarySerializer(source="property", read_only=True)
+    reference = serializers.CharField(read_only=True)
 
     class Meta:
         model = Enquiry
-        fields = ["id", "user", "name", "email", "phone", "message", "project", "project_summary", "service", "service_summary", "property", "property_summary", "status", "internal_notes", "created_at", "updated_at"]
+        fields = ["id", "reference", "user", "name", "email", "phone", "preferred_contact", "message", "project", "project_summary", "service", "service_summary", "property", "property_summary", "status", "internal_notes", "created_at", "updated_at"]
         read_only_fields = ["user", "status", "internal_notes", "created_at", "updated_at"]
 
     def validate(self, attrs):

@@ -103,3 +103,61 @@ class Phase2APITestCase(TestCase):
         self.client.force_authenticate(self.staff_user)
         self.assertEqual(self.client.get(f"/api/v1/enquiries/{enquiry_id}/").data["internal_notes"], "Staff only")
         self.assertEqual(self.client.get(f"/api/v1/appointments/{appointment_id}/").data["internal_notes"], "Staff only")
+
+
+class ConsultationAndEnquiryDetailsTestCase(TestCase):
+    """Additive fields used by the website's consultation flow and enquiry forms (spec W-12, W-06, W-08)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.drawing = Service.objects.create(name="Architectural drawing", slug="architectural-drawing", short_description="x", description="x", is_published=True)
+        self.approval = Service.objects.create(name="Building approval", slug="building-approval", short_description="x", description="x", is_published=True)
+        self.hidden = Service.objects.create(name="Hidden", slug="hidden", short_description="x", description="x", is_published=False)
+        self.client_user = User.objects.create_user("client@example.com", "password")
+
+    def consultation(self, **overrides):
+        data = {"name": "Ada", "email": "ada@example.com", "preferred_date": "2030-01-08", **overrides}
+        return self.client.post("/api/v1/appointments/", data, format="json")
+
+    def test_multi_service_consultation_with_mode_and_context(self):
+        self.client.force_authenticate(self.client_user)
+        response = self.consultation(
+            services=[self.drawing.id, self.approval.id], services_not_sure=True, mode="video", based_abroad=True,
+            project_type="new_build", site_location="Ibeju-Lekki, Lagos", timeline="asap", time_window="Morning",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        record = Appointment.objects.get()
+        self.assertEqual(sorted(record.services.values_list("slug", flat=True)), ["architectural-drawing", "building-approval"])
+        # The single-service field used by existing clients mirrors the first choice.
+        self.assertEqual(record.service, self.drawing)
+        self.assertEqual(response.data["reference"], f"CON-{record.pk:04d}")
+        self.assertEqual([item["slug"] for item in response.data["services_summary"]], ["architectural-drawing", "building-approval"])
+        self.assertEqual(response.data["status"], "requested")
+        listed = self.client.get("/api/v1/appointments/").data["results"][0]
+        self.assertEqual((listed["mode"], listed["based_abroad"], listed["project_type"], listed["timeline"]), ("video", True, "new_build", "asap"))
+
+    def test_existing_single_service_contract_still_works(self):
+        response = self.consultation(service=self.drawing.id)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        record = Appointment.objects.get()
+        self.assertEqual(list(record.services.all()), [self.drawing])
+        self.assertFalse(record.services_not_sure)
+
+    def test_rejects_unpublished_services_and_unknown_choices(self):
+        self.assertIn("services", self.consultation(services=[self.hidden.id]).data)
+        self.assertIn("mode", self.consultation(mode="carrier-pigeon").data)
+        self.assertIn("project_type", self.consultation(project_type="castle").data)
+        self.assertEqual(Appointment.objects.count(), 0)
+
+    def test_enquiry_preferred_contact_and_reference(self):
+        response = self.client.post("/api/v1/enquiries/", {"name": "Ada", "email": "ada@example.com", "message": "Hello", "preferred_contact": "whatsapp"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        record = Enquiry.objects.get()
+        self.assertEqual(record.preferred_contact, "whatsapp")
+        self.assertEqual(response.data["reference"], f"ENQ-{record.pk:04d}")
+        self.assertIn("preferred_contact", self.client.post("/api/v1/enquiries/", {"name": "A", "email": "a@example.com", "message": "x", "preferred_contact": "fax"}, format="json").data)
+
+    def test_project_building_type_is_public(self):
+        category = ProjectCategory.objects.create(name="Residential", slug="residential")
+        Project.objects.create(title="P", slug="p", summary="s", description="d", category=category, status=Project.Status.COMPLETED, is_published=True, building_type="Detached residence")
+        self.assertEqual(self.client.get("/api/v1/projects/p/").data["building_type"], "Detached residence")

@@ -2,7 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from users.views import CurrentUserAvatarView, CurrentUserView, RegisterView
+from users.views import CurrentUserAvatarView, CurrentUserView, PasswordResetConfirmView, PasswordResetRequestView, RegisterView
 
 from .api_views import (
 	AchievementViewSet,
@@ -41,5 +41,7 @@ urlpatterns = [
 	path("auth/register/", RegisterView.as_view(), name="register"),
 	path("auth/me/", CurrentUserView.as_view(), name="current_user"),
 	path("auth/me/avatar/", CurrentUserAvatarView.as_view(), name="current_user_avatar"),
+	path("auth/password-reset/", PasswordResetRequestView.as_view(), name="password_reset"),
+	path("auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
 	path("", include(router.urls)),
 ]

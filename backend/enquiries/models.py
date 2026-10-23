@@ -1,3 +1,5 @@
+import builtins
+
 from django.conf import settings
 from django.db import models
 
@@ -9,11 +11,17 @@ class Enquiry(models.Model):
         RESOLVED = "resolved", "Resolved"
         CLOSED = "closed", "Closed"
 
+    class ContactMethod(models.TextChoices):
+        CALL = "call", "Call"
+        WHATSAPP = "whatsapp", "WhatsApp"
+        EMAIL = "email", "Email"
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="enquiries", blank=True, null=True)
     name = models.CharField(max_length=160)
     email = models.EmailField()
     phone = models.CharField(max_length=40, blank=True)
     message = models.TextField()
+    preferred_contact = models.CharField(max_length=16, choices=ContactMethod.choices, blank=True, help_text="How the client would like BRIGHTHOMES to reply.")
     project = models.ForeignKey("projects.Project", on_delete=models.SET_NULL, related_name="enquiries", blank=True, null=True)
     service = models.ForeignKey("services.Service", on_delete=models.SET_NULL, related_name="enquiries", blank=True, null=True)
     property = models.ForeignKey("properties.Property", on_delete=models.SET_NULL, related_name="enquiries", blank=True, null=True)
@@ -26,4 +34,10 @@ class Enquiry(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Enquiry from {self.name}"
+        return f"{self.reference} from {self.name}"
+
+    # `property` is a field name on this model, so the decorator is referenced explicitly.
+    @builtins.property
+    def reference(self):
+        """Stable, human-readable reference shown to clients and staff, e.g. ENQ-2041."""
+        return f"ENQ-{self.pk:04d}" if self.pk else ""
