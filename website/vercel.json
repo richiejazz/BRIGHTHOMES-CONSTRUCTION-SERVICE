@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/projects", "destination": "/construction", "statusCode": 301 },
+    { "source": "/projects/:slug", "destination": "/construction/:slug", "statusCode": 301 },
+    { "source": "/account/saved", "destination": "/account/saved-projects", "statusCode": 301 },
+    { "source": "/account/appointments", "destination": "/account/consultations", "statusCode": 301 }
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

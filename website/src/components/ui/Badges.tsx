@@ -1,51 +1,77 @@
-import type { AppointmentStatus, EnquiryStatus, ProjectStatus } from '../../api/types'
+import type { AppointmentStatus, EnquiryStatus, ListingType, ProjectStatus, PropertyStatus } from '../../api/types'
+import { consultationStatusLabels, enquiryStatusLabels, listingTypeLabels, projectStatusLabels, propertyStatusLabels } from '../../lib/labels'
 
-type Tone = 'neutral' | 'bronze' | 'success' | 'danger' | 'outline-dark'
+// Status vocabulary (spec §03 "Status colours", §18). Status is never shown by colour alone:
+// every dot or pill carries its label, and pill text stays at ink/bronze contrast in both themes.
 
-const tones: Record<Tone, string> = {
-  neutral: 'border-stone-300 text-stone-600',
-  bronze: 'border-bronze/60 text-bronze-dark',
-  success: 'border-success/40 text-success',
-  danger: 'border-danger/40 text-danger',
-  'outline-dark': 'border-paper/40 text-paper',
+const pillBase = 'inline-flex min-h-6 items-center whitespace-nowrap px-2.5 text-[10px] font-semibold tracking-[0.18em] uppercase'
+
+type PillTone = 'requested' | 'confirmed' | 'review' | 'responded' | 'neutral'
+const pillTones: Record<PillTone, string> = {
+  requested: 'border border-bronze text-bronze',
+  confirmed: 'bg-ink text-bg',
+  review: 'border border-control-line text-ink',
+  responded: 'bg-stone text-ink',
+  neutral: 'border border-control-line text-ink2',
 }
 
-export function Badge({ children, tone = 'neutral', className = '' }: { children: string; tone?: Tone; className?: string }) {
-  return <span className={`inline-flex items-center border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] ${tones[tone]} ${className}`}>{children}</span>
+function Pill({ tone, children }: { tone: PillTone; children: string }) {
+  return <span className={`${pillBase} ${pillTones[tone]}`}>{children}</span>
 }
 
-const projectStatus: Record<ProjectStatus, { label: string; tone: Tone }> = {
-  completed: { label: 'Completed', tone: 'neutral' },
-  ongoing: { label: 'Ongoing', tone: 'bronze' },
+const consultationTone: Record<AppointmentStatus, PillTone> = { requested: 'requested', confirmed: 'confirmed', declined: 'neutral', completed: 'responded', cancelled: 'neutral' }
+const enquiryTone: Record<EnquiryStatus, PillTone> = { new: 'requested', in_progress: 'review', resolved: 'responded', closed: 'neutral' }
+
+/** Consultation status. "Requested" reads "Requested · awaiting confirmation" where there is room. */
+export function ConsultationPill({ status, long = false }: { status: AppointmentStatus; long?: boolean }) {
+  return <Pill tone={consultationTone[status]}>{status === 'requested' && long ? 'Requested · awaiting confirmation' : consultationStatusLabels[status]}</Pill>
 }
 
-export function ProjectStatusBadge({ status, onDark = false }: { status: ProjectStatus; onDark?: boolean }) {
-  const { label, tone } = projectStatus[status]
-  return <Badge tone={onDark ? 'outline-dark' : tone}>{label}</Badge>
+export function EnquiryPill({ status }: { status: EnquiryStatus }) {
+  return <Pill tone={enquiryTone[status]}>{enquiryStatusLabels[status]}</Pill>
 }
 
-/** Always shown on demo records so placeholder content is never mistaken for real work. */
-export function DemoBadge({ className = '' }: { className?: string }) {
+type DotKind = 'ok' | 'ring' | 'dashed' | 'mute' | 'ink'
+
+function Dot({ kind }: { kind: DotKind }) {
+  const style: Record<DotKind, string> = {
+    ok: 'bg-ok',
+    ring: 'border-[1.5px] border-bronze',
+    dashed: 'border-[1.5px] border-dashed border-bronze',
+    mute: 'bg-mute',
+    ink: 'bg-ink',
+  }
+  return <span aria-hidden="true" className={`inline-block size-[7px] shrink-0 rounded-full ${style[kind]}`} />
+}
+
+const propertyDot: Record<PropertyStatus, DotKind> = { available: 'ok', reserved: 'ring', coming_soon: 'dashed', sold: 'mute', rented: 'mute', unavailable: 'mute' }
+
+/** Availability: dot + label. Illustrative listings make no availability claim. */
+export function PropertyStatusLabel({ status, demo, className = '' }: { status: PropertyStatus; demo?: boolean; className?: string }) {
   return (
-    <span className={`inline-flex items-center bg-bronze-light px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-ink ${className}`} title="Demonstration content — not a real BRIGHTHOMES project">
-      Demo content
+    <span className={`inline-flex items-center gap-2 text-[12px] text-ink2 ${className}`}>
+      <Dot kind={demo ? 'dashed' : propertyDot[status]} />
+      {demo ? 'Illustrative' : propertyStatusLabels[status]}
     </span>
   )
 }
 
-const requestStatus: Record<EnquiryStatus | AppointmentStatus, { label: string; tone: Tone }> = {
-  new: { label: 'Received', tone: 'bronze' },
-  in_progress: { label: 'In progress', tone: 'bronze' },
-  resolved: { label: 'Resolved', tone: 'success' },
-  closed: { label: 'Closed', tone: 'neutral' },
-  requested: { label: 'Requested', tone: 'bronze' },
-  confirmed: { label: 'Confirmed', tone: 'success' },
-  declined: { label: 'Declined', tone: 'danger' },
-  completed: { label: 'Completed', tone: 'neutral' },
-  cancelled: { label: 'Cancelled', tone: 'neutral' },
+/** §15: Completed = ink dot; Ongoing (in progress) = bronze ring. */
+export function ProjectStatusLabel({ status, className = '' }: { status: ProjectStatus; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-2 text-[12px] text-ink2 ${className}`}>
+      <Dot kind={status === 'completed' ? 'ink' : 'ring'} />
+      {projectStatusLabels[status]}
+    </span>
+  )
 }
 
-export function RequestStatusBadge({ status }: { status: EnquiryStatus | AppointmentStatus }) {
-  const { label, tone } = requestStatus[status]
-  return <Badge tone={tone}>{label}</Badge>
+/** §14 listing tag: top-left on the image, 10px caps on --bg; `inverse` (ink fill) inside panels. */
+export function ListingTag({ listing, inverse = false, className = '' }: { listing: ListingType; inverse?: boolean; className?: string }) {
+  return <span className={`${pillBase} ${inverse ? 'bg-ink text-bg' : 'bg-bg text-ink'} ${className}`}>{listingTypeLabels[listing]}</span>
+}
+
+/** §16 placeholder label: "Illustrative image" chip, kept for any future placeholder. */
+export function IllustrativeLabel({ children = 'Illustrative image', className = '' }: { children?: string; className?: string }) {
+  return <span className={`${pillBase} bg-black/65 text-[#EEE8DD] ${className}`}>{children}</span>
 }

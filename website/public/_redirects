@@ -1,0 +1,6 @@
+# Netlify: permanent redirects for retired URLs (query strings are preserved), then the SPA fallback.
+/projects               /construction            301
+/projects/:slug         /construction/:slug      301
+/account/saved          /account/saved-projects  301
+/account/appointments   /account/consultations   301
+/*                      /index.html              200

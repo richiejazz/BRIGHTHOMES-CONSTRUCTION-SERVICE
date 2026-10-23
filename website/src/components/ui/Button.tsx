@@ -1,38 +1,24 @@
-import { ArrowUpRight, LoaderCircle } from 'lucide-react'
+import { ArrowRight, LoaderCircle } from 'lucide-react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
 
-type Variant = 'primary' | 'secondary' | 'accent' | 'inverse' | 'text'
-type Size = 'md' | 'lg'
+// §11 website buttons: rectangles with tracked capitals, 54px tall, radius 0. Styles live in
+// index.css (.btn, .btn-primary …) so the header, footer and pages share one definition.
 
-const base =
-  'group inline-flex items-center justify-center gap-3 font-semibold tracking-[0.04em] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-60'
-
-const variants: Record<Variant, string> = {
-  primary: 'bg-ink text-paper hover:bg-graphite',
-  secondary: 'border border-ink/80 text-ink hover:bg-ink hover:text-paper',
-  accent: 'bg-bronze-light text-ink hover:bg-paper',
-  inverse: 'border border-paper/40 text-paper hover:border-paper hover:bg-paper hover:text-ink',
-  text: 'text-ink underline-offset-8 hover:underline decoration-bronze',
-}
-
-const sizes: Record<Size, string> = {
-  md: 'min-h-11 px-5 text-sm',
-  lg: 'min-h-14 px-7 text-[0.95rem]',
-}
+type Variant = 'primary' | 'secondary' | 'on-photo' | 'on-photo-outline' | 'on-band' | 'text'
+type Size = 'md' | 'compact'
 
 function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className = '') {
-  return [base, variants[variant], variant === 'text' ? 'min-h-11 text-sm' : sizes[size], className].join(' ')
+  if (variant === 'text') return `text-link ${className}`
+  return ['btn', `btn-${variant}`, size === 'compact' ? 'btn-compact' : '', 'disabled:cursor-not-allowed disabled:opacity-40', className].join(' ')
 }
 
 function Content({ children, arrow, loading }: { children: ReactNode; arrow?: boolean; loading?: boolean }) {
   return (
     <>
       {loading && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
-      <span>{children}</span>
-      {arrow && !loading && (
-        <ArrowUpRight aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-      )}
+      {children}
+      {arrow && !loading && <ArrowRight aria-hidden="true" strokeWidth={1.5} className="arrow size-4 transition-transform duration-250 group-hover:translate-x-1" />}
     </>
   )
 }
@@ -41,7 +27,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant
 
 export function Button({ variant, size, arrow, loading, className, children, type = 'button', disabled, ...props }: ButtonProps) {
   return (
-    <button type={type} className={buttonClasses(variant, size, className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
+    <button type={type} className={`group ${buttonClasses(variant, size, className)}`} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
       <Content arrow={arrow} loading={loading}>
         {children}
       </Content>
@@ -53,7 +39,7 @@ type ButtonLinkProps = LinkProps & { variant?: Variant; size?: Size; arrow?: boo
 
 export function ButtonLink({ variant, size, arrow, className, children, ...props }: ButtonLinkProps) {
   return (
-    <Link className={buttonClasses(variant, size, className)} {...props}>
+    <Link className={`group ${buttonClasses(variant, size, className)}`} {...props}>
       <Content arrow={arrow}>{children}</Content>
     </Link>
   )

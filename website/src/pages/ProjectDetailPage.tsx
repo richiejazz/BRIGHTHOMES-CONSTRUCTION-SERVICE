@@ -1,83 +1,86 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useProject, useProjects, useServices } from '../api/content'
 import { isNotFound } from '../api/errors'
 import type { Project } from '../api/types'
-import { ProjectCard } from '../components/projects/ProjectCard'
-import { ProjectGallery } from '../components/projects/ProjectGallery'
-import { SaveProjectButton } from '../components/projects/SaveProjectButton'
-import { ServiceIcon } from '../components/services/ServiceIndex'
-import { Badge, DemoBadge, ProjectStatusBadge } from '../components/ui/Badges'
-import { ButtonLink } from '../components/ui/Button'
-import { Container } from '../components/ui/Layout'
+import { SaveTextButton } from '../components/content/SaveButton'
+import { EnquiryForm } from '../components/forms/RequestForms'
+import { Media } from '../components/media/Media'
+import { Viewer, type GalleryImage } from '../components/media/Viewer'
+import { ProjectStatusLabel } from '../components/ui/Badges'
+import { BAR_OFFSET, Em } from '../components/ui/Layout'
 import { Reveal } from '../components/ui/Reveal'
 import { ErrorState, LoadingAnnouncement, Skeleton } from '../components/ui/States'
-import { formatMonthYear } from '../lib/format'
+import { padIndex } from '../lib/format'
+import { coverImage } from '../lib/projects'
+import { routes } from '../lib/routes'
 import NotFoundPage from './NotFoundPage'
 
 function Facts({ project }: { project: Project }) {
   const facts = [
     { label: 'Category', value: project.category.name },
-    { label: 'Status', value: project.status === 'completed' ? 'Completed' : 'Ongoing' },
-    project.location && { label: 'Location', value: project.location },
-    project.start_date && { label: 'Started', value: formatMonthYear(project.start_date) },
-    project.end_date && { label: project.status === 'completed' ? 'Completed' : 'Expected completion', value: formatMonthYear(project.end_date) },
-  ].filter((fact): fact is { label: string; value: string } => Boolean(fact))
+    { label: 'Status', value: <ProjectStatusLabel status={project.status} className="text-[14px] text-ink" /> },
+    { label: 'Building type', value: project.building_type || 'To be confirmed' },
+    { label: 'Location', value: project.location || 'Location to be confirmed' },
+  ]
   return (
-    <dl className="grid grid-cols-2 border-t border-graphite sm:grid-cols-3 lg:grid-cols-5">
-      {facts.map((fact) => (
-        <div key={fact.label} className="border-b border-graphite py-5 pr-4">
-          <dt className="eyebrow text-stone-500">{fact.label}</dt>
-          <dd className="mt-2 text-paper">{fact.value}</dd>
+    <dl className="grid grid-cols-2 border-y border-line desk:grid-cols-4">
+      {facts.map((fact, index) => (
+        <div key={fact.label} className={`border-line py-5 pr-4 ${index % 2 ? 'border-l pl-4 desk:pl-6' : ''} ${index >= 2 ? 'border-t desk:border-t-0' : ''} ${index === 2 ? 'desk:border-l desk:pl-6' : ''}`}>
+          <dt className="label text-[10px] text-mute">{fact.label}</dt>
+          <dd className="mt-2 text-[14px] text-ink">{fact.value}</dd>
         </div>
       ))}
     </dl>
   )
 }
 
-function RelatedProjects({ project }: { project: Project }) {
-  const related = useProjects({ category: project.category.id })
-  const items = related.data?.results.filter((item) => item.id !== project.id).slice(0, 3) ?? []
-  if (!related.isSuccess || items.length === 0) return null
+/** 7/5 then 5/7 alternating crops; any image opens the full-screen viewer (W-06 gallery, §16). */
+function Gallery({ images, title, illustrative, onOpen }: { images: GalleryImage[]; title: string; illustrative: boolean; onOpen: (index: number) => void }) {
+  const rows: GalleryImage[][] = []
+  for (let index = 0; index < images.length; index += 2) rows.push(images.slice(index, index + 2))
   return (
-    <section aria-labelledby="related-title" className="border-t border-stone-300 py-24 sm:py-28">
-      <Container>
-        <div className="mb-14 flex flex-wrap items-end justify-between gap-6">
-          <h2 id="related-title" className="font-display text-5xl leading-none sm:text-6xl">
-            More {project.category.name.toLowerCase()} work
-          </h2>
-          <ButtonLink to={`/projects?category=${project.category.slug}`} variant="text" arrow>
-            View all
-          </ButtonLink>
-        </div>
-        <ul className="grid gap-x-8 gap-y-14 md:grid-cols-3">
-          {items.map((item, index) => (
-            <Reveal as="li" key={item.id} delay={index * 100}>
-              <ProjectCard project={item} aspect="aspect-[4/3]" />
-            </Reveal>
-          ))}
-        </ul>
-      </Container>
+    <section className="container-page py-section" aria-labelledby="gallery-title">
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h2 id="gallery-title" className="label text-bronze">
+          Gallery
+        </h2>
+        <p className="text-[12px] text-ink2">Select an image to view full screen</p>
+      </div>
+      <div className="mt-8 space-y-6">
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="grid gap-6 phone:grid-cols-12">
+            {row.map((image, position) => {
+              const index = rowIndex * 2 + position
+              const wide = (rowIndex % 2 === 0) === (position === 0)
+              const span = row.length === 1 ? 'phone:col-span-12' : wide ? 'phone:col-span-7' : 'phone:col-span-5'
+              return (
+                <button key={image.id} type="button" onClick={() => onOpen(index)} className={`group block text-left ${span}`} aria-label={`Open photo ${index + 1} of ${images.length}: ${image.alt || title}`}>
+                  {/* The wide tile's ratio sets the row height; only the narrow tile stretches to match it (an
+                      aspect ratio plus full height would derive a width wider than the tile). */}
+                  <Media src={image.src} alt={image.alt} aspect={wide || row.length === 1 ? 'aspect-[4/3]' : 'aspect-[4/5] phone:aspect-auto phone:h-full'} zoom illustrative={illustrative} />
+                  {image.caption && <span className="mt-2 block text-[12px] text-ink2">{image.caption}</span>}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
 
 function DetailSkeleton() {
   return (
-    <>
+    <div className={`container-page ${BAR_OFFSET} pb-section`} aria-busy="true">
       <LoadingAnnouncement label="Loading project" />
-      <div className="bg-ink pb-16 pt-36 sm:pt-44">
-        <Container>
-          <Skeleton className="h-3 w-32 bg-graphite" />
-          <Skeleton className="mt-8 h-16 w-3/4 bg-graphite" />
-          <Skeleton className="mt-6 h-5 w-1/2 bg-graphite" />
-        </Container>
-      </div>
-      <Container className="py-16">
-        <Skeleton className="aspect-[16/10] w-full" />
-      </Container>
-    </>
+      <Skeleton className="h-3 w-40" />
+      <Skeleton className="mt-8 h-20 w-3/4" />
+      <Skeleton className="mt-10 h-16 w-full" />
+      <Skeleton className="mt-10 aspect-[21/9] w-full" />
+    </div>
   )
 }
 
@@ -85,111 +88,123 @@ export default function ProjectDetailPage() {
   const { slug = '' } = useParams()
   const query = useProject(slug)
   const services = useServices()
+  const list = useProjects({})
+  const [viewer, setViewer] = useState<number | null>(null)
 
   if (query.isPending) return <DetailSkeleton />
   if (query.isError) {
-    if (isNotFound(query.error)) return <NotFoundPage title="This project isn’t available." message="It may have been unpublished or the link may be incorrect." />
+    if (isNotFound(query.error)) return <NotFoundPage title="This project isn’t available." message="It may have been moved or unpublished. Browse our other construction work instead." />
     return (
-      <div className="bg-ink pb-24 pt-40">
-        <Container>
-          <ErrorState tone="dark" error={query.error} onRetry={() => void query.refetch()} />
-        </Container>
+      <div className={`container-page ${BAR_OFFSET} pb-section`}>
+        <ErrorState title="We couldn’t load this project." error={query.error} onRetry={() => void query.refetch()} />
       </div>
     )
   }
 
   const project = query.data
-  const projectServices = services.data?.filter((service) => project.services.includes(service.id)) ?? []
-  const enquiryParams = new URLSearchParams({ project: project.slug })
+  const cover = coverImage(project.images)
+  const images: GalleryImage[] = project.images.map((image) => ({ id: image.id, src: image.image, alt: image.alt_text, caption: image.caption }))
+  const delivered = services.data?.filter((service) => project.services.includes(service.id)) ?? []
+  const paragraphs = project.description.split(/\n\s*\n/).filter(Boolean)
+  const half = Math.ceil(paragraphs.length / 2)
+  const others = list.data?.results ?? []
+  const position = others.findIndex((item) => item.id === project.id)
+  const next = others.length > 1 ? others[(position + 1) % others.length] : null
 
   return (
-    <article>
-      <title>{`${project.title} — BRIGHTHOMES Projects`}</title>
-      <header className="blueprint-grid bg-ink pb-14 pt-32 text-paper sm:pt-40">
-        <Container>
-          <Link to="/projects" className="inline-flex min-h-11 items-center gap-2 text-sm text-stone-400 transition-colors hover:text-paper">
-            <ArrowLeft aria-hidden="true" className="size-4" /> All projects
-          </Link>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            {project.is_demo && <DemoBadge />}
-            {!project.is_published && <Badge tone="outline-dark">Unpublished</Badge>}
-            <ProjectStatusBadge status={project.status} onDark />
-            <span className="eyebrow text-bronze-light">{project.category.name}</span>
+    <>
+      <title>{`${project.title} — BRIGHTHOMES Construction Service`}</title>
+      <header className={`container-page ${BAR_OFFSET}`}>
+        <Link to={routes.construction} className="text-link no-underline">
+          <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.5} /> All projects
+        </Link>
+        <p className="label mt-8 text-bronze">Case study{project.is_demo ? ' — Illustrative' : ''}</p>
+        <div className="mt-5 flex flex-col gap-8 desk:flex-row desk:items-end desk:justify-between">
+          <h1 className="max-w-[16ch] font-display text-[clamp(48px,8vw,128px)] leading-[0.96] font-medium tracking-[-0.015em] break-words">{project.title}</h1>
+          <div className="shrink-0 desk:pb-4">
+            <SaveTextButton kind="project" id={project.id} />
           </div>
-          <h1 className="mt-6 max-w-5xl animate-rise font-display text-[3rem] leading-[0.98] tracking-[-0.015em] sm:text-7xl lg:text-[5.5rem]">{project.title}</h1>
-          <p className="mt-6 max-w-2xl animate-rise text-lg leading-relaxed text-stone-300 [animation-delay:120ms]">{project.summary}</p>
-          <div className="mt-14">
-            <Facts project={project} />
-          </div>
-        </Container>
+        </div>
+        <div className="mt-[clamp(32px,4vw,56px)]">
+          <Facts project={project} />
+        </div>
       </header>
 
-      {project.is_demo && (
-        <div className="border-b border-bronze/40 bg-bronze-light/20">
-          <Container className="py-4 text-sm text-ink">
-            <strong className="font-semibold">Demonstration record.</strong> This entry is placeholder content used while the BRIGHTHOMES portfolio is prepared. It is not a real BRIGHTHOMES project.
-          </Container>
-        </div>
-      )}
+      <div className="mt-[clamp(32px,4vw,56px)]">
+        <Media src={cover?.image} alt={cover?.alt_text ?? project.title} aspect="aspect-[4/3] phone:aspect-[21/9]" illustrative={project.is_demo} eager sizes="100vw" />
+      </div>
 
-      <section aria-label="Project images" className="pt-12 sm:pt-16">
-        <Container>
-          <ProjectGallery images={project.images} seed={project.id} title={project.title} />
-        </Container>
-      </section>
-
-      <section aria-labelledby="overview-title" className="py-20 sm:py-28">
-        <Container className="grid gap-14 lg:grid-cols-12 lg:gap-10">
-          <div className="lg:col-span-7">
-            <h2 id="overview-title" className="eyebrow flex items-center gap-3 text-bronze-dark">
-              <span aria-hidden="true" className="h-px w-8 bg-current" />
-              Project overview
-            </h2>
-            <div className="mt-8 space-y-5 text-lg leading-relaxed text-graphite">
-              {project.description
-                .split(/\n{2,}/)
-                .filter(Boolean)
-                .map((paragraph, index) => (
-                  <p key={index} className="whitespace-pre-line">
-                    {paragraph}
-                  </p>
-                ))}
-            </div>
-          </div>
-          <aside className="space-y-12 lg:col-span-4 lg:col-start-9" aria-label="Project actions">
-            {projectServices.length > 0 && (
-              <div>
-                <h2 className="eyebrow text-stone-500">Services on this project</h2>
-                <ul className="mt-4 border-t border-stone-300">
-                  {projectServices.map((service) => (
-                    <li key={service.id}>
-                      <Link to={`/services#${service.slug}`} className="flex min-h-14 items-center gap-4 border-b border-stone-300 py-3 transition-colors hover:text-bronze-dark">
-                        <ServiceIcon slug={service.slug} className="size-5 text-bronze-dark" />
-                        <span className="font-medium">{service.name}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+      <section className="container-page py-section" aria-labelledby="story-title">
+        <div className="grid-editorial gap-y-8">
+          <h2 id="story-title" className="label text-bronze desk:col-span-3">
+            The project
+          </h2>
+          <div className="desk:col-span-8 desk:col-start-5">
+            <p className="font-display text-[clamp(26px,2.6vw,36px)] leading-[1.2] font-medium">{project.summary}</p>
+            {paragraphs.length > 0 && (
+              <div className="mt-8 grid gap-6 text-[15px] leading-[1.6] text-ink2 phone:grid-cols-2">
+                <div className="space-y-4">{paragraphs.slice(0, half).map((text, index) => <p key={index}>{text}</p>)}</div>
+                <div className="space-y-4">{paragraphs.slice(half).map((text, index) => <p key={index}>{text}</p>)}</div>
               </div>
             )}
-            <div className="border-l-2 border-bronze pl-6">
-              <p className="font-display text-3xl leading-tight">Planning something similar?</p>
-              <p className="mt-3 leading-relaxed text-stone-600">Tell us about your project or request a consultation with the BRIGHTHOMES team.</p>
-              <div className="mt-6 flex flex-col gap-3">
-                <ButtonLink to={`/contact?${enquiryParams}`} arrow>
-                  Enquire about this project
-                </ButtonLink>
-                <ButtonLink to={`/contact?type=consultation&${enquiryParams}`} variant="secondary">
-                  Request a consultation
-                </ButtonLink>
-                <SaveProjectButton project={project} />
-              </div>
-            </div>
-          </aside>
-        </Container>
+            {project.is_demo && (
+              <p className="mt-8 border border-line px-4 py-3 text-[13px] leading-[1.55] text-ink2">
+                Illustrative case study — this is not a BRIGHTHOMES project. It is a placeholder shown while the portfolio is prepared.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {delivered.length > 0 && (
+          <div className="grid-editorial mt-[clamp(56px,6vw,96px)] gap-y-6">
+            <h2 className="label text-bronze desk:col-span-3">Services delivered</h2>
+            <ol className="border-t border-line desk:col-span-8 desk:col-start-5">
+              {delivered.map((service, index) => (
+                <li key={service.id} className="border-b border-line">
+                  <Link to={routes.service(service.slug)} className="group flex min-h-14 items-center gap-5 transition-[padding,color] duration-300 hover:pl-3 hover:text-bronze">
+                    <span className="text-[11px] font-semibold text-bronze tabular-nums">{padIndex(index)}</span>
+                    <span className="flex-1 font-display text-[22px]">{service.name}</span>
+                    <ArrowUpRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </section>
 
-      <RelatedProjects project={project} />
-    </article>
+      {images.length > 0 && <Gallery images={images} title={project.title} illustrative={project.is_demo} onOpen={setViewer} />}
+      <Viewer images={images} index={viewer} onIndexChange={setViewer} onClose={() => setViewer(null)} title={project.title} illustrative={project.is_demo} />
+
+      <section className="bg-paper py-section" aria-labelledby="enquire-title">
+        <div className="container-page grid-editorial gap-y-12">
+          <Reveal className="desk:col-span-5">
+            <p className="label text-bronze">Enquire</p>
+            <h2 id="enquire-title" className="mt-5 font-display text-[clamp(40px,4.4vw,64px)] leading-[1] font-medium">
+              Planning something <Em>similar?</Em>
+            </h2>
+            <p className="mt-6 max-w-sm text-[15px] leading-[1.6] text-ink2">Send a short note about your site and what you’d like to build. You can also book a full consultation.</p>
+            <Link to={routes.consultation({ project: project.slug })} className="text-link mt-6">
+              Request a consultation <ArrowRight aria-hidden="true" className="arrow size-4" strokeWidth={1.5} />
+            </Link>
+          </Reveal>
+          <div className="desk:col-span-6 desk:col-start-7">
+            <EnquiryForm context={{ project: { id: project.id, title: project.title } }} defaultMessage={`Hello, I’d like to discuss a project similar to ${project.title}.`} />
+          </div>
+        </div>
+      </section>
+
+      {next && (
+        <Link to={routes.project(next.slug)} className="group block bg-band text-band-ink">
+          <div className="container-page flex flex-wrap items-center justify-between gap-6 py-[clamp(48px,6vw,88px)]">
+            <div>
+              <p className="label text-band-mute">Next project</p>
+              <p className="mt-4 font-display text-[clamp(32px,4vw,56px)] leading-[1] font-medium transition-colors group-hover:text-band-accent">{next.title}</p>
+            </div>
+            <ArrowRight aria-hidden="true" className="size-6 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={1.25} />
+          </div>
+        </Link>
+      )}
+    </>
   )
 }

@@ -4,11 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#161513" />
+    <meta name="theme-color" content="#F3EFE7" />
     <meta name="description" content="BRIGHTHOMES CONSTRUCTION SERVICE — premium residential and commercial construction in Nigeria. Building Dreams, Constructing Reality." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      // Apply the saved theme before first paint so a dark preference never flashes light.
+      try {
+        if (localStorage.getItem('brighthomes.theme') === 'dark') {
+          document.documentElement.dataset.theme = 'dark'
+          document.querySelector('meta[name="theme-color"]').content = '#0F0E0D'
+        }
+      } catch (e) {}
+    </script>
     <title>BRIGHTHOMES Construction Service</title>
   </head>
   <body>

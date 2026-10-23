@@ -1,50 +1,187 @@
 @import "tailwindcss";
 
 /*
- * BRIGHTHOMES design tokens.
- * Charcoal foundations, warm white surfaces, stone neutrals and a restrained bronze accent.
- * Square geometry and hairline borders are deliberate: the brand is architectural, not app-like.
+ * BRIGHTHOMES website design tokens — Design Specification v1.0, §03, §04, §23, §24 and Appendix B.
+ *
+ * The spec values live as plain custom properties on :root and are redefined for
+ * [data-theme="dark"]. Dark mode is designed, not inverted: surfaces step up in warmth, bronze is
+ * lifted for contrast, and imagery is dimmed 12%. Tailwind utilities read the variables
+ * (`bg-bg`, `bg-paper`, `text-ink`, `border-line`, `text-bronze`, `bg-band` …), so every component
+ * follows the active theme without hard-coded colours.
  */
+:root {
+  --font-display-family: "Cormorant Garamond", Georgia, serif;
+  --font-ui-family: "Manrope", system-ui, sans-serif;
+
+  --bg: #F3EFE7;
+  --paper: #FAF8F3;
+  --stone: #E8E1D5;
+  --ink: #191816;
+  --ink2: #46423B;
+  --mute: #6B655B;
+  --line: #DCD4C6;
+  --line2: #BCB2A1;
+  --bronze: #8A5A2E;
+  --bronze2: #B4875A;
+  --band: #181715;
+  --band-ink: #EEE8DD;
+  --ok: #4F7A4A;
+  --danger: #A13F2D;
+  /* Danger on inverted surfaces (toasts are --ink filled): the other theme's danger. */
+  --danger-inverse: #E58A72;
+  /*
+   * Contrast tokens (Phase D audit). Derived from the spec palette so every pairing meets WCAG AA:
+   * --control-line   field underlines, checkboxes and chips — ≥ 3:1 on bg, paper and stone
+   *                  (--line2 is 1.8:1, too faint to identify a field on its own)
+   * --on-bronze      text on a bronze fill (primary hover) — 5.9:1
+   * --band-accent    bronze on the charcoal band — 5.6:1 (--bronze is 3.1:1 there)
+   * --band-mute      secondary text on the band — 5.2:1
+   */
+  /*
+   * Text over photography is the same in both themes: warm white, with a light bronze accent for
+   * large type. It always sits on a scrim of at least 65% black (≥ 5.7:1 even over a white photo).
+   */
+  --photo-ink: #EEE8DD;
+  --photo-accent: #D8B98E;
+  --control-line: #878074;
+  --on-bronze: #FFFFFF;
+  --band-accent: #B4875A;
+  --band-mute: rgb(238 232 221 / 0.62);
+  --img-dim: 0;
+  --radius: 0;
+
+  --container: 1440px;
+  --gutter: clamp(20px, 5vw, 72px);
+  --section: clamp(80px, 10vw, 160px);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0F0E0D;
+  --paper: #161513;
+  --stone: #1B1A17;
+  --ink: #EEE8DD;
+  --ink2: #CFC7BA;
+  --mute: #9C9487;
+  --line: #2A2724;
+  --line2: #433F39;
+  --bronze: #C99D6E;
+  --bronze2: #9A7550;
+  --band: #1C1A17;
+  /* Not redefined in Appendix B; the §10 light → dark mapping gives the dark status green. */
+  --ok: #8DB886;
+  --danger: #E58A72;
+  --danger-inverse: #A13F2D;
+  --control-line: #6B655C;
+  /* White on the lifted bronze is 2.3:1; deep black is 7.8:1. */
+  --on-bronze: #0F0E0D;
+  --band-accent: #C99D6E;
+  --img-dim: .12;
+
+  color-scheme: dark;
+}
+
 @theme {
-  --font-display: "Instrument Serif", "Iowan Old Style", "Times New Roman", serif;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* No default Tailwind palette: the brand has no blue, cyan, purple or neon. */
+  --color-*: initial;
 
-  --color-ink: #161513;
-  --color-charcoal: #22211f;
-  --color-graphite: #3a3835;
-  --color-stone-600: #5f5a52;
-  --color-stone-500: #7a746a;
-  --color-stone-400: #a59e92;
-  --color-stone-300: #cfc8bc;
-  --color-stone-200: #e2dcd1;
-  --color-bone: #ece7de;
-  --color-paper: #f6f3ee;
-  --color-bronze: #a9844f;
-  --color-bronze-light: #c9a46a;
-  --color-bronze-dark: #7a5a2c;
-  --color-success: #3f6b4a;
-  --color-danger: #9b3b2f;
+  --font-display: var(--font-display-family);
+  --font-sans: var(--font-ui-family);
 
-  --radius-xs: 2px;
+  /*
+   * §23 breakpoints, named so Tailwind's defaults (sm 640, md 768, lg 1024, xl 1280) keep working
+   * for pages not yet rebuilt: `phone:` ≥ 600 (gutters leave 20px), `desk:` ≥ 980 (desktop nav and
+   * 12-column grid), `wide:` ≥ 1280 (72px gutters), `max:` ≥ 1440.
+   */
+  --breakpoint-phone: 600px;
+  --breakpoint-desk: 980px;
+  --breakpoint-wide: 1280px;
+  --breakpoint-max: 1440px;
 
-  --ease-architectural: cubic-bezier(0.22, 1, 0.36, 1);
+  --container-page: 1440px;
+  --spacing-gutter: clamp(20px, 5vw, 72px);
+  --spacing-section: clamp(80px, 10vw, 160px);
 
-  --animate-rise: rise 0.9s var(--ease-architectural) both;
-  --animate-fade: fade 0.6s ease-out both;
-  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  /* §04 website scale. Line height / tracking pairs are applied with the size. */
+  --text-hero: clamp(54px, 7.4vw, 124px);
+  --text-hero--line-height: 0.94;
+  --text-hero--letter-spacing: -0.015em;
+  --text-page-title: clamp(64px, 10vw, 160px);
+  --text-page-title--line-height: 0.96;
+  --text-page-title--letter-spacing: -0.015em;
+  --text-section: clamp(44px, 5vw, 76px);
+  --text-section--line-height: 0.96;
+  --text-section--letter-spacing: -0.015em;
+  --text-statement: clamp(32px, 4.2vw, 62px);
+  --text-statement--line-height: 1.08;
+  --text-figure: clamp(96px, 11vw, 176px);
+  --text-figure--line-height: 0.85;
+  --text-detail-price: 48px;
+  --text-detail-price--line-height: 1;
+  --text-item-lg: clamp(30px, 3.2vw, 46px);
+  --text-item-lg--line-height: 1;
+  --text-item: 26px;
+  --text-item--line-height: 1;
+  --text-lead: clamp(16px, 1.3vw, 19px);
+  --text-lead--line-height: 1.65;
+  --text-body: 15px;
+  --text-body--line-height: 1.6;
+  --text-nav: 13px;
+  --text-label: 11px;
+  --text-label--letter-spacing: 0.2em;
+  --text-button: 12px;
+  --text-button--letter-spacing: 0.16em;
+
+  --ease-architectural: cubic-bezier(.2, .7, .2, 1);
+
+  /* §24 motion. */
+  --animate-rise: rise 700ms var(--ease-architectural) both;
+  --animate-fade: fade 300ms ease-out both;
+  --animate-skeleton: skeleton 1.25s ease-in-out infinite;
 
   @keyframes rise {
-    from { opacity: 0; transform: translateY(18px); }
+    from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: translateY(0); }
   }
   @keyframes fade {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  @keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.55; }
+  @keyframes skeleton {
+    from { background-position: 100% 0; }
+    to { background-position: -200% 0; }
   }
+
+  --radius-xs: 2px;
+}
+
+/* Spec tokens exposed as theme-aware utilities (`inline` keeps the var() reference). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-paper: var(--paper);
+  --color-stone: var(--stone);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-mute: var(--mute);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-bronze: var(--bronze);
+  --color-bronze2: var(--bronze2);
+  --color-band: var(--band);
+  --color-band-ink: var(--band-ink);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-danger-inverse: var(--danger-inverse);
+  --color-control-line: var(--control-line);
+  --color-photo-ink: var(--photo-ink);
+  --color-photo-accent: var(--photo-accent);
+  --color-on-bronze: var(--on-bronze);
+  --color-band-accent: var(--band-accent);
+  --color-band-mute: var(--band-mute);
+  --color-white: #fff;
+  --color-black: #000;
 }
 
 @layer base {
@@ -55,46 +192,198 @@
   body {
     margin: 0;
     min-width: 320px;
-    background: var(--color-paper);
-    color: var(--color-ink);
-    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui-family);
+    font-size: 15px;
+    line-height: 1.6;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    /* §24 theme switch: 450ms background and colour transition. */
+    transition: background-color 450ms ease, color 450ms ease;
   }
   button, input, textarea, select { font: inherit; }
-  ::selection { background: var(--color-bronze-light); color: var(--color-ink); }
+  ::selection { background: var(--bronze); color: var(--on-bronze); }
 
+  /* §11: 2px bronze focus outline, 3px offset, on every interactive element. */
   :focus-visible {
-    outline: 2px solid var(--color-bronze);
+    outline: 2px solid var(--bronze);
     outline-offset: 3px;
+  }
+
+  /* §03: photographs are dimmed 12% in dark mode so they never out-glow the UI. */
+  img:not([data-no-dim]), video:not([data-no-dim]) {
+    filter: brightness(calc(1 - var(--img-dim)));
+    transition: filter 450ms ease;
   }
 
   dialog::backdrop { background: rgb(22 21 19 / 0.6); }
 }
 
 @layer components {
-  /* Small uppercase label used above headings and on metadata. */
-  .eyebrow {
-    font-size: 0.72rem;
+  /* §04 label / metadata: Manrope 11px / 600, uppercase, tracking 0.20em. */
+  .label {
+    font-family: var(--font-ui-family);
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
   }
 
-  /* Scroll reveal, toggled by the Reveal component. */
-  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.9s var(--ease-architectural), transform 0.9s var(--ease-architectural); }
+  /*
+   * §11 website buttons: rectangles with tracked capitals, 54px tall, radius 0.
+   * `.btn-compact` is the 44px bar variant used in the top navigation.
+   */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 54px;
+    /* 30px from the spec; narrower on small phones so a full label fits a 320px screen. */
+    padding: 0 clamp(16px, 5vw, 30px);
+    border: 1px solid transparent;
+    border-radius: 0;
+    font-family: var(--font-ui-family);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background-color 250ms ease, border-color 250ms ease, color 250ms ease;
+  }
+  .btn-compact { min-height: 44px; padding: 0 20px; }
+  .btn-primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .btn-primary:hover { background: var(--bronze); border-color: var(--bronze); color: var(--on-bronze); }
+  .btn-secondary { background: transparent; border-color: var(--line2); color: var(--ink); }
+  .btn-secondary:hover { border-color: var(--ink); }
+  /* On photography: ivory fill with charcoal text, or an ivory 45% outline. */
+  .btn-on-photo { background: #EEE8DD; border-color: #EEE8DD; color: #191816; }
+  /* Over photography the hover is theme-independent: the dark theme's --bronze2 is too deep for ink text. */
+  .btn-on-photo:hover { background: var(--photo-accent); border-color: var(--photo-accent); color: #191816; }
+  .btn-on-photo-outline { background: transparent; border-color: rgb(238 232 221 / 0.45); color: #EEE8DD; }
+  .btn-on-photo-outline:hover { border-color: #EEE8DD; }
+  /* On the charcoal band the band ink plays the role of ivory. */
+  .btn-on-band { background: var(--band-ink); border-color: var(--band-ink); color: var(--band); }
+  .btn-on-band:hover { background: var(--band-accent); border-color: var(--band-accent); color: var(--band); }
+
+  /* §11 text link: 12px caps, 1px --line2 underline with a 7px gap; arrow nudges 4px; hover → bronze. */
+  .text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-decoration-color: var(--line2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 7px;
+    transition: color 250ms ease;
+  }
+  .text-link:hover { color: var(--bronze); }
+  .text-link .arrow { transition: transform 250ms var(--ease); }
+  .text-link:hover .arrow { transform: translateX(4px); }
+
+  /* §11 icon button: 44 × 44, transparent, 1px border on hover. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid transparent;
+    transition: border-color 250ms ease;
+  }
+  .icon-btn:hover { border-color: currentColor; }
+
+  /* §05 nav item: 1px underline in currentColor when active or hovered. */
+  .nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 10px;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 250ms var(--ease);
+  }
+  .nav-link:hover::after,
+  .nav-link[aria-current="page"]::after { transform: scaleX(1); }
+
+  /* §23 container: max-width 1440, padding-inline clamp(20px, 5vw, 72px). */
+  .container-page {
+    width: 100%;
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* §23 grid: 12 columns, 24px gap; one column below 980px. */
+  .grid-editorial {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  @media (min-width: 980px) {
+    .grid-editorial { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  }
+
+  /* §22 skeleton: stone → paper → stone, 300% size, 1.25s ease-in-out. */
+  .skeleton {
+    background: linear-gradient(90deg, var(--stone) 0%, var(--paper) 50%, var(--stone) 100%);
+    background-size: 300% 100%;
+    animation: var(--animate-skeleton);
+  }
+
+  /* §24 page and section enter: fade + 14px rise over 700ms. Toggled by the Reveal component. */
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity 700ms var(--ease), transform 700ms var(--ease); }
   .reveal[data-visible="true"] { opacity: 1; transform: none; }
 
-  /* Faint architectural drawing grid. */
-  .blueprint-grid {
-    background-image:
-      linear-gradient(to right, rgb(201 164 106 / 0.07) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(201 164 106 / 0.07) 1px, transparent 1px);
-    background-size: 48px 48px;
+  /* §13 image scrim for text on photography: 40% → 82% black toward the text edge. */
+  .scrim-bottom { background: linear-gradient(to bottom, rgb(0 0 0 / 0) 0%, rgb(0 0 0 / 0.4) 40%, rgb(0 0 0 / 0.82) 100%); }
+  /*
+   * Home hero. A top band keeps the transparent header legible; from 980px the text block sits on
+   * the left, so the scrim deepens toward the left edge; below 980px the text spans the width, so
+   * the scrim deepens toward the bottom where the text is.
+   */
+  .scrim-hero {
+    background:
+      linear-gradient(to bottom, rgb(0 0 0 / 0.6) 0, rgb(0 0 0 / 0) 180px),
+      linear-gradient(to top, rgb(0 0 0 / 0.86) 0%, rgb(0 0 0 / 0.72) 45%, rgb(0 0 0 / 0.3) 75%, rgb(0 0 0 / 0.15) 100%);
+  }
+  @media (min-width: 980px) {
+    .scrim-hero {
+      background:
+        linear-gradient(to bottom, rgb(0 0 0 / 0.6) 0, rgb(0 0 0 / 0) 180px),
+        linear-gradient(to right, rgb(0 0 0 / 0.72) 0%, rgb(0 0 0 / 0.5) 55%, rgb(0 0 0 / 0.2) 100%),
+        linear-gradient(to top, rgb(0 0 0 / 0.55) 0%, rgb(0 0 0 / 0) 45%);
+    }
+  }
+  /* Auth image panel: a top band behind the "Client account" label, the §13 scrim behind the caption. */
+  .scrim-auth {
+    background:
+      linear-gradient(to bottom, rgb(0 0 0 / 0.62) 0, rgb(0 0 0 / 0.56) 150px, rgb(0 0 0 / 0) 300px),
+      linear-gradient(to bottom, rgb(0 0 0 / 0) 0%, rgb(0 0 0 / 0.4) 40%, rgb(0 0 0 / 0.82) 100%);
   }
 }
 
+/* §24 reduced motion: remove translation and scale; keep short fades. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {
@@ -103,4 +392,31 @@
     transition-duration: 0.01ms !important;
   }
   .reveal { opacity: 1; transform: none; }
+  .skeleton { animation: none; }
 }
+
+/*
+ * React Day Picker in the spec's square, hairline language (consultation step 3). Kept outside
+ * the cascade layers: the library's own stylesheet is unlayered and would otherwise win.
+ */
+.rdp-root.bh-daypicker {
+  --rdp-accent-color: var(--ink);
+  --rdp-accent-background-color: var(--stone);
+  --rdp-day-height: 44px;
+  --rdp-day-width: 44px;
+  --rdp-day_button-height: 42px;
+  --rdp-day_button-width: 42px;
+  --rdp-day_button-border-radius: 0;
+  --rdp-selected-border: 1px solid var(--ink);
+  --rdp-today-color: var(--bronze);
+  --rdp-disabled-opacity: 0.35;
+  --rdp-nav_button-height: 44px;
+  --rdp-nav_button-width: 44px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.rdp-root.bh-daypicker .rdp-month_caption { font-family: var(--font-display-family); font-size: 22px; font-weight: 500; }
+.rdp-root.bh-daypicker .rdp-weekday { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); opacity: 1; }
+.rdp-root.bh-daypicker .rdp-selected .rdp-day_button { background: var(--ink); color: var(--bg); font-weight: 600; }
+.rdp-root.bh-daypicker .rdp-chevron { fill: var(--ink); }
+.rdp-root.bh-daypicker .rdp-day_button:hover:not([disabled]) { outline: 1px solid var(--control-line); }

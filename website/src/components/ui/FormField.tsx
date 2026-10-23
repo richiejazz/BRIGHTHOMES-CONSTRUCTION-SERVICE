@@ -1,42 +1,39 @@
+import { AlertCircle } from 'lucide-react'
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 
-type Tone = 'light' | 'dark'
-
-const control = {
-  light: 'border-stone-300 bg-transparent text-ink placeholder:text-stone-400 focus:border-bronze-dark focus:shadow-[0_1px_0_0_var(--color-bronze-dark)] aria-[invalid=true]:border-danger',
-  dark: 'border-graphite bg-transparent text-paper placeholder:text-stone-500 focus:border-bronze-light focus:shadow-[0_1px_0_0_var(--color-bronze-light)] aria-[invalid=true]:border-[#e3907f]',
-}
+// §12 website fields are architectural: an 11px tracked label above a single underline.
+// The underline uses --control-line (≥ 3:1 on every surface) so a field is identifiable on its own;
+// focus turns it bronze; errors turn it danger and are always explained in words.
 
 type FieldShellProps = {
   label: string
   error?: string
   hint?: string
   optional?: boolean
-  tone?: Tone
   className?: string
   children: (ids: { id: string; describedBy?: string }) => ReactNode
 }
 
-function FieldShell({ label, error, hint, optional, tone = 'light', className = '', children }: FieldShellProps) {
+function FieldShell({ label, error, hint, optional, className = '', children }: FieldShellProps) {
   const id = useId()
   const hintId = hint ? `${id}-hint` : undefined
   const errorId = error ? `${id}-error` : undefined
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
   return (
     <div className={className}>
-      <label htmlFor={id} className={`eyebrow flex items-baseline justify-between gap-3 ${tone === 'dark' ? 'text-stone-300' : 'text-stone-600'}`}>
+      <label htmlFor={id} className="label flex items-baseline justify-between gap-3 text-mute">
         <span>{label}</span>
-        {optional && <span className="text-[0.65rem] font-medium tracking-[0.12em] normal-case opacity-80">Optional</span>}
+        {optional && <span className="text-[11px] font-medium tracking-normal normal-case">Optional</span>}
       </label>
       {children({ id, describedBy })}
       {hint && !error && (
-        <p id={hintId} className={`mt-2 text-sm ${tone === 'dark' ? 'text-stone-400' : 'text-stone-500'}`}>
+        <p id={hintId} className="mt-2 text-[13px] text-mute">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} className={`mt-2 text-sm font-medium ${tone === 'dark' ? 'text-[#e3907f]' : 'text-danger'}`}>
+        <p id={errorId} className="mt-2 text-[12px] font-semibold text-danger">
           {error}
         </p>
       )}
@@ -44,35 +41,36 @@ function FieldShell({ label, error, hint, optional, tone = 'light', className = 
   )
 }
 
-type Common = { label: string; error?: string; hint?: string; optional?: boolean; tone?: Tone; className?: string; registration: UseFormRegisterReturn }
+type Common = { label: string; error?: string; hint?: string; optional?: boolean; className?: string; registration: UseFormRegisterReturn }
 
-const controlBase = 'mt-3 block w-full rounded-none border-0 border-b px-0 py-3 text-base outline-none transition-colors duration-200 focus-visible:outline-none'
+const controlBase =
+  'mt-1 block w-full rounded-none border-0 border-b border-control-line bg-transparent px-0 text-[16px] text-ink outline-none transition-colors duration-200 placeholder:text-mute focus:border-bronze focus-visible:outline-none aria-[invalid=true]:border-danger disabled:opacity-60'
 
-export function TextField({ label, error, hint, optional, tone = 'light', className, registration, ...props }: Common & InputHTMLAttributes<HTMLInputElement>) {
+export function TextField({ label, error, hint, optional, className, registration, ...props }: Common & InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <FieldShell label={label} error={error} hint={hint} optional={optional} tone={tone} className={className}>
+    <FieldShell label={label} error={error} hint={hint} optional={optional} className={className}>
       {({ id, describedBy }) => (
-        <input id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy} aria-required={!optional || undefined} className={`${controlBase} ${control[tone]}`} {...registration} {...props} />
+        <input id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy} aria-required={!optional || undefined} className={`${controlBase} h-[50px]`} {...registration} {...props} />
       )}
     </FieldShell>
   )
 }
 
-export function TextAreaField({ label, error, hint, optional, tone = 'light', className, registration, ...props }: Common & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextAreaField({ label, error, hint, optional, className, registration, ...props }: Common & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
-    <FieldShell label={label} error={error} hint={hint} optional={optional} tone={tone} className={className}>
+    <FieldShell label={label} error={error} hint={hint} optional={optional} className={className}>
       {({ id, describedBy }) => (
-        <textarea id={id} rows={5} aria-invalid={error ? true : undefined} aria-describedby={describedBy} aria-required={!optional || undefined} className={`${controlBase} resize-y ${control[tone]}`} {...registration} {...props} />
+        <textarea id={id} rows={4} aria-invalid={error ? true : undefined} aria-describedby={describedBy} aria-required={!optional || undefined} className={`${controlBase} min-h-[110px] resize-y py-3 leading-[1.6]`} {...registration} {...props} />
       )}
     </FieldShell>
   )
 }
 
-export function SelectField({ label, error, hint, optional, tone = 'light', className, registration, children, ...props }: Common & SelectHTMLAttributes<HTMLSelectElement>) {
+export function SelectField({ label, error, hint, optional, className, registration, children, ...props }: Common & SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <FieldShell label={label} error={error} hint={hint} optional={optional} tone={tone} className={className}>
+    <FieldShell label={label} error={error} hint={hint} optional={optional} className={className}>
       {({ id, describedBy }) => (
-        <select id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy} className={`${controlBase} cursor-pointer ${control[tone]} ${tone === 'dark' ? '[&>option]:bg-ink' : ''}`} {...registration} {...props}>
+        <select id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy} className={`${controlBase} h-[50px] cursor-pointer [&>option]:bg-paper [&>option]:text-ink`} {...registration} {...props}>
           {children}
         </select>
       )}
@@ -80,12 +78,16 @@ export function SelectField({ label, error, hint, optional, tone = 'light', clas
   )
 }
 
-/** Form-level error summary, announced to assistive technology. */
-export function FormAlert({ message }: { message?: string }) {
+/** Form-level error summary with a red rule (§21), announced to assistive technology. */
+export function FormAlert({ message, title }: { message?: string; title?: string }) {
   if (!message) return null
   return (
-    <p role="alert" className="border-l-2 border-danger bg-danger/5 px-4 py-3 text-sm font-medium text-danger">
-      {message}
-    </p>
+    <div role="alert" className="flex gap-3 border-l-2 border-danger bg-paper px-4 py-3 text-[14px] text-ink">
+      <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+      <p>
+        {title && <strong className="font-semibold">{title} </strong>}
+        {message}
+      </p>
+    </div>
   )
 }

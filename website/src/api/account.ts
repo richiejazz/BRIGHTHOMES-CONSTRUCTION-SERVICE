@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from './client'
-import type { Appointment, AppointmentInput, Enquiry, EnquiryInput, Paginated, RegisterInput, SavedProject, TokenPair, User } from './types'
+import type { Appointment, AppointmentInput, Enquiry, EnquiryInput, Paginated, ProfileInput, RegisterInput, SavedProject, SavedProperty, TokenPair, User } from './types'
 
 export const accountKeys = {
   me: ['me'] as const,
@@ -12,6 +12,9 @@ export const accountKeys = {
   enquiriesPage: (page: number) => ['enquiries', 'page', page] as const,
   appointments: ['appointments'] as const,
   appointmentsPage: (page: number) => ['appointments', 'page', page] as const,
+  savedProperties: ['saved-properties'] as const,
+  savedPropertiesPage: (page: number) => ['saved-properties', 'page', page] as const,
+  savedForProperty: (propertyId: number) => ['saved-properties', 'property', propertyId] as const,
 }
 
 // --- Authentication (used by AuthContext) -------------------------------------------------
@@ -20,23 +23,49 @@ export const authApi = {
   login: async (email: string, password: string) => (await apiClient.post<TokenPair>('/auth/token/', { email, password })).data,
   register: async (input: RegisterInput) => (await apiClient.post<User>('/auth/register/', input)).data,
   me: async () => (await apiClient.get<User>('/auth/me/')).data,
+  /** Always resolves the same way whether or not the account exists (spec §21). */
+  requestPasswordReset: async (email: string) => (await apiClient.post<{ detail: string }>('/auth/password-reset/', { email })).data,
+  confirmPasswordReset: async (input: { uid: string; token: string; password: string }) => (await apiClient.post<{ detail: string }>('/auth/password-reset/confirm/', input)).data,
 }
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: Pick<User, 'first_name' | 'last_name'>) => (await apiClient.patch<User>('/auth/me/', input)).data,
+    mutationFn: async (input: ProfileInput) => (await apiClient.patch<User>('/auth/me/', input)).data,
+    onSuccess: (user) => queryClient.setQueryData(accountKeys.me, user),
+  })
+}
+
+/** Upload or replace the profile photo. The server validates, crops to a square and strips EXIF. */
+export function useUploadAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const body = new FormData()
+      body.append('avatar', file)
+      // A JSON content type would make Axios serialise the FormData; the browser adds the boundary.
+      return (await apiClient.put<User>('/auth/me/avatar/', body, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 })).data
+    },
+    onSuccess: (user) => queryClient.setQueryData(accountKeys.me, user),
+  })
+}
+
+export function useRemoveAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => (await apiClient.delete<User>('/auth/me/avatar/')).data,
     onSuccess: (user) => queryClient.setQueryData(accountKeys.me, user),
   })
 }
 
 // --- Saved projects ----------------------------------------------------------------------
 
-export function useSavedProjects(page: number) {
+export function useSavedProjects(page: number, enabled = true) {
   return useQuery({
     queryKey: accountKeys.savedPage(page),
     queryFn: async () => (await apiClient.get<Paginated<SavedProject>>('/saved-projects/', { params: { page } })).data,
     placeholderData: keepPreviousData,
+    enabled,
   })
 }
 
@@ -64,6 +93,43 @@ export function useRemoveSavedProject() {
       await apiClient.delete(`/saved-projects/${savedId}/`)
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: accountKeys.saved }),
+  })
+}
+
+// --- Saved properties ----------------------------------------------------------------------
+
+export function useSavedProperties(page: number, enabled = true) {
+  return useQuery({
+    queryKey: accountKeys.savedPropertiesPage(page),
+    queryFn: async () => (await apiClient.get<Paginated<SavedProperty>>('/saved-properties/', { params: { page } })).data,
+    placeholderData: keepPreviousData,
+    enabled,
+  })
+}
+
+export function useSavedPropertyRecord(propertyId: number | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: accountKeys.savedForProperty(propertyId ?? 0),
+    queryFn: async () => (await apiClient.get<Paginated<SavedProperty>>('/saved-properties/', { params: { property: propertyId } })).data.results[0] ?? null,
+    enabled: enabled && propertyId !== undefined,
+  })
+}
+
+export function useSaveProperty() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (propertyId: number) => (await apiClient.post<SavedProperty>('/saved-properties/', { property: propertyId })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: accountKeys.savedProperties }),
+  })
+}
+
+export function useRemoveSavedProperty() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (savedId: number) => {
+      await apiClient.delete(`/saved-properties/${savedId}/`)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: accountKeys.savedProperties }),
   })
 }
 

@@ -1,65 +1,111 @@
+import { LogOut } from 'lucide-react'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
 
-import { Container } from '../../components/ui/Layout'
+import { useMyAppointments, useMyEnquiries, useSavedProjects, useSavedProperties } from '../../api/account'
+import { Avatar } from '../../components/account/Avatar'
+import { ButtonLink } from '../../components/ui/Button'
+import { BAR_OFFSET } from '../../components/ui/Layout'
 import { ErrorState, LoadingAnnouncement, Skeleton } from '../../components/ui/States'
+import { useToast } from '../../components/ui/toast-context'
 import { useAuth } from '../../context/useAuth'
+import { routes } from '../../lib/routes'
 
-const accountNav = [
-  { to: '/account/saved', label: 'Saved projects' },
-  { to: '/account/enquiries', label: 'Enquiries' },
-  { to: '/account/appointments', label: 'Consultations' },
-  { to: '/account/profile', label: 'Profile' },
-] as const
-
-function AccountHeader({ name }: { name?: string }) {
+function AccountNav() {
+  const { logout } = useAuth()
+  const notify = useToast()
+  const savedProjects = useSavedProjects(1)
+  const savedProperties = useSavedProperties(1)
+  const enquiries = useMyEnquiries(1)
+  const consultations = useMyAppointments(1)
+  const items = [
+    { to: routes.account.overview, label: 'Overview', end: true },
+    { to: routes.account.savedProjects, label: 'Saved projects', count: savedProjects.data?.count },
+    { to: routes.account.savedProperties, label: 'Saved properties', count: savedProperties.data?.count },
+    { to: routes.account.enquiries, label: 'Enquiries', count: enquiries.data?.count },
+    { to: routes.account.consultations, label: 'Consultations', count: consultations.data?.count },
+    { to: routes.account.profile, label: 'Profile' },
+  ]
+  const link = 'flex min-h-11 items-center justify-between gap-4 whitespace-nowrap text-[13px] transition-colors'
   return (
-    <div className="blueprint-grid bg-ink pt-32 text-paper sm:pt-40">
-      <Container>
-        <p className="eyebrow flex items-center gap-3 text-bronze-light">
-          <span aria-hidden="true" className="h-px w-8 bg-current" />
-          My account
-        </p>
-        <h1 className="mt-5 font-display text-5xl leading-none sm:text-7xl">{name ? `Welcome, ${name}.` : 'Your account'}</h1>
-        <nav aria-label="Account" className="-mx-5 mt-12 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-          <ul className="flex gap-8 border-b border-graphite">
-            {accountNav.map((item) => (
-              <li key={item.to}>
-                <NavLink to={item.to} className={({ isActive }) => `-mb-px inline-flex min-h-12 items-center whitespace-nowrap border-b-2 pb-1 text-sm font-semibold tracking-[0.04em] transition-colors ${isActive ? 'border-bronze-light text-paper' : 'border-transparent text-stone-400 hover:text-paper'}`}>
+    <nav aria-label="Account" className="-mx-[var(--gutter)] overflow-x-auto px-[var(--gutter)] desk:mx-0 desk:overflow-visible desk:px-0">
+      <ul className="flex gap-6 border-b border-line desk:block desk:border-b-0">
+        {items.map((item) => (
+          <li key={item.to} className="desk:border-b desk:border-line">
+            <NavLink to={item.to} end={item.end} className={({ isActive }) => `${link} -mb-px border-b-2 desk:mb-0 desk:border-b-0 ${isActive ? 'border-ink font-semibold text-ink' : 'border-transparent text-ink2 hover:text-ink'}`}>
+              {({ isActive }) => (
+                <>
                   {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </Container>
-    </div>
+                  <span className="hidden text-[12px] text-ink2 tabular-nums desk:inline">{item.count ?? (isActive && item.end ? '•' : '')}</span>
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+        <li className="desk:border-b desk:border-line">
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              notify({ tone: 'info', title: 'You’ve been signed out.' })
+            }}
+            className={`${link} text-ink2 hover:text-danger`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <LogOut aria-hidden="true" className="size-3.5" strokeWidth={1.5} /> Sign out
+            </span>
+          </button>
+        </li>
+      </ul>
+    </nav>
   )
 }
 
-/** Guards the client area: waits for the session, sends anonymous visitors to sign in. */
+/** W-15 account shell: greeting header, side navigation (tabs below 980px), and the current page. */
 export default function AccountLayout() {
   const { status, user, signedOut, retry } = useAuth()
   const location = useLocation()
 
-  if (status === 'anonymous') return signedOut ? <Navigate to="/" replace /> : <Navigate to="/login" replace state={{ from: location }} />
+  // A deliberate sign-out leaves for the home page; anyone else signs in and comes straight back.
+  if (status === 'anonymous') return signedOut ? <Navigate to={routes.home} replace /> : <Navigate to={routes.login} replace state={{ from: location }} />
 
   return (
-    <>
+    <div className={`container-page ${BAR_OFFSET} pb-section`}>
       <title>My account — BRIGHTHOMES Construction Service</title>
-      <AccountHeader name={user?.first_name} />
-      <Container className="min-h-[50vh] py-14 sm:py-20">
-        {status === 'loading' ? (
-          <div>
-            <LoadingAnnouncement label="Loading your account" />
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="mt-6 h-24 w-full" />
+      {status === 'loading' ? (
+        <div aria-busy="true">
+          <LoadingAnnouncement label="Loading your account" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="size-12 rounded-full" />
+            <Skeleton className="h-10 w-72" />
           </div>
-        ) : status === 'unavailable' ? (
-          <ErrorState title="We couldn’t load your account" error={new Error('unavailable')} onRetry={retry} />
-        ) : (
-          <Outlet />
-        )}
-      </Container>
-    </>
+          <Skeleton className="mt-12 h-48 w-full" />
+        </div>
+      ) : status === 'unavailable' || !user ? (
+        <ErrorState title="We couldn’t load your account." error={new Error('unavailable')} onRetry={retry} />
+      ) : (
+        <>
+          <header className="flex flex-col gap-6 border-b border-ink pb-8 phone:flex-row phone:items-end phone:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar user={user} size={52} />
+              <div>
+                <p className="label text-[10px] text-mute">Client account</p>
+                <h1 className="mt-1 font-display text-[clamp(32px,3.6vw,48px)] leading-[1.05] font-medium">Welcome back{user.first_name ? `, ${user.first_name}` : ''}</h1>
+              </div>
+            </div>
+            <ButtonLink to={routes.consultation()} size="compact">
+              New consultation request
+            </ButtonLink>
+          </header>
+          <div className="grid-editorial mt-8 gap-y-8 desk:mt-12">
+            <div className="desk:col-span-3">
+              <AccountNav />
+            </div>
+            <div className="min-w-0 desk:col-span-9">
+              <Outlet />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   )
 }

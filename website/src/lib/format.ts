@@ -18,3 +18,13 @@ export function formatTime(value: string) {
 
 /** 0 → "01": the numbering used across editorial lists. */
 export const padIndex = (index: number) => String(index + 1).padStart(2, '0')
+
+/** "40+" → ["40", "+"]: the number in ink, the suffix in the accent. */
+export function splitFigure(value: string): [string, string] {
+  const match = value.match(/^([\d.,]+)(.*)$/)
+  return match ? [match[1], match[2]] : [value, '']
+}
+
+const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve']
+/** 8 → "Eight"; larger numbers stay as digits. */
+export const numberWord = (value: number) => WORDS[value] ?? String(value)

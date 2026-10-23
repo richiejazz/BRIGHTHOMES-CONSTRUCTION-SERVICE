@@ -1,196 +1,356 @@
-import { ArrowDown } from 'lucide-react'
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import { useProjects, useServices } from '../api/content'
-import { AchievementStats } from '../components/achievements/AchievementStats'
-import { HeroElevation } from '../components/art/Elevations'
-import { ProjectCard, ProjectCardSkeleton } from '../components/projects/ProjectCard'
-import { ServiceIndex, ServiceIndexSkeleton } from '../components/services/ServiceIndex'
+import { useProjects, useProperties, useServices } from '../api/content'
+import type { Project, Property, Service } from '../api/types'
+import { ProjectItem, ProjectItemSkeleton } from '../components/content/ProjectItem'
+import { PropertyItem, PropertyItemSkeleton } from '../components/content/PropertyItem'
+import { Media } from '../components/media/Media'
 import { ButtonLink } from '../components/ui/Button'
-import { Container, SectionHeading } from '../components/ui/Layout'
+import { ConsultationCta } from '../components/sections/ConsultationCta'
+import { FiguresBand } from '../components/sections/FiguresBand'
+import { Em, SectionHeading } from '../components/ui/Layout'
 import { Reveal } from '../components/ui/Reveal'
-import { EmptyState, ErrorState, LoadingAnnouncement } from '../components/ui/States'
-import { ConsultationCta, ObjectivesSection, TrustSection } from '../components/sections/CompanySections'
-import { company } from '../content/company'
+import { Skeleton } from '../components/ui/States'
+import { trustPillars } from '../content/company'
+import { editorial, serviceImage } from '../content/media'
+import { numberWord, padIndex } from '../lib/format'
+import { listingTypeLabels } from '../lib/labels'
+import { routes } from '../lib/routes'
 
 function Hero() {
+  const image = editorial.hero
   return (
-    <section aria-labelledby="hero-title" className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-ink text-paper">
-      <div className="blueprint-grid absolute inset-0 -z-20" aria-hidden="true" />
-      <HeroElevation className="absolute inset-0 -z-10 size-full animate-fade opacity-45 [animation-delay:300ms] [animation-duration:1.6s] md:opacity-70 lg:opacity-100" />
-      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/85 to-ink/10 lg:via-ink/70 lg:to-transparent" />
-      <Container className="flex flex-1 flex-col justify-end pb-14 pt-36 sm:pb-20 lg:justify-center lg:pb-24">
-        <div className="max-w-3xl">
-          <p className="eyebrow flex animate-rise items-center gap-3 text-bronze-light">
+    <section aria-labelledby="hero-title" className="relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden bg-band text-photo-ink">
+      <img src={image.src} alt={image.alt} className="absolute inset-0 -z-20 size-full object-cover" fetchPriority="high" />
+      <div aria-hidden="true" className="scrim-hero absolute inset-0 -z-10" />
+      <div className="container-page grid-editorial items-end pt-32 pb-[clamp(40px,6vw,72px)]">
+        <div className="desk:col-span-8">
+          <p className="label flex items-center gap-4 text-photo-ink">
             <span aria-hidden="true" className="h-px w-10 bg-current" />
-            Construction · Real Estate · Lagos
+            BRIGHTHOMES Construction Service
           </p>
-          <h1 id="hero-title" className="mt-8 animate-rise font-display text-[3.4rem] leading-[0.95] tracking-[-0.02em] [animation-delay:120ms] sm:text-[5.5rem] lg:text-[7.25rem]">
+          <h1 id="hero-title" className="mt-7 animate-rise font-display text-hero font-medium">
             Building Dreams,
-            <span className="block italic text-bronze-light">Constructing Reality.</span>
+            <br />
+            <em className="font-normal text-photo-accent">Constructing Reality.</em>
           </h1>
-          <p className="mt-8 max-w-xl animate-rise text-lg leading-relaxed text-stone-300 [animation-delay:240ms]">
-            Premium residential and commercial construction in Nigeria — combining engineering excellence, modern design and rigorous project management.
-          </p>
-          <div className="mt-10 flex animate-rise flex-col gap-3 [animation-delay:360ms] sm:flex-row sm:gap-4">
-            <ButtonLink to="/projects" variant="accent" size="lg" arrow>
-              Explore Projects
+          <p className="mt-7 max-w-[440px] text-[15px] leading-[1.6] text-photo-ink/90">Architecture, construction and real estate — one team, from the first drawing to the day you take the keys.</p>
+          <div className="mt-9 flex flex-col gap-3 phone:flex-row">
+            <ButtonLink to={routes.consultation()} variant="on-photo" arrow>
+              Request a consultation
             </ButtonLink>
-            <ButtonLink to="/contact" variant="inverse" size="lg">
-              Start a Conversation
+            <ButtonLink to={routes.construction} variant="on-photo-outline">
+              Explore our work
             </ButtonLink>
           </div>
         </div>
-      </Container>
-      <Container className="pb-6">
-        <div className="flex items-center justify-between border-t border-graphite pt-5 text-[0.68rem] uppercase tracking-[0.2em] text-stone-500">
-          <span>Illustrative elevation</span>
-          <a href="#introduction" className="inline-flex min-h-11 items-center gap-2 transition-colors hover:text-paper">
-            Discover <ArrowDown aria-hidden="true" className="size-3.5" />
-          </a>
-        </div>
-      </Container>
+        <nav aria-label="Explore" className="hidden desk:col-span-3 desk:col-start-10 desk:block">
+          <ul className="border-t border-photo-ink/30">
+            {[
+              { to: routes.construction, label: 'Construction' },
+              { to: routes.realEstate, label: 'Real Estate' },
+            ].map((item) => (
+              <li key={item.to} className="border-b border-photo-ink/30">
+                <Link to={item.to} className="group flex min-h-14 items-center justify-between font-display text-[22px] transition-colors hover:text-photo-accent">
+                  {item.label}
+                  <ArrowUpRight aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={1.5} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+      {image.illustrative && <span className="label absolute right-[var(--gutter)] bottom-3 text-[10px] text-photo-ink/75">Illustrative image</span>}
     </section>
   )
 }
 
-function Introduction() {
+function Statement() {
   return (
-    <section id="introduction" aria-labelledby="intro-title" className="scroll-mt-20 py-24 sm:py-32">
-      <Container className="grid gap-10 lg:grid-cols-12">
-        <Reveal className="lg:col-span-3">
-          <p id="intro-title" className="eyebrow flex items-center gap-3 text-bronze-dark">
-            <span aria-hidden="true" className="h-px w-8 bg-current" />
-            Who we are
-          </p>
+    <section className="container-page py-section">
+      <Reveal className="grid-editorial">
+        <p className="label text-mute desk:col-span-3">
+          <span className="text-bronze">(00)</span> — The practice
+        </p>
+        <p className="font-display text-statement font-medium desk:col-span-9">
+          We design, approve, build and sell — so the people who trust us with a plot of land, a set of drawings or a property search deal with <Em accent>one accountable team</Em> from the first drawing to handover.
+        </p>
+      </Reveal>
+    </section>
+  )
+}
+
+function ServiceIndexList({ services, compact = false }: { services: Service[]; compact?: boolean }) {
+  return (
+    <ul className="border-t border-line">
+      {services.map((service) => (
+        <li key={service.id} className="border-b border-line">
+          <Link to={routes.service(service.slug)} className={`group flex items-center justify-between gap-4 transition-[color,padding] duration-300 hover:pl-3 hover:text-bronze ${compact ? 'min-h-12 text-[14px]' : 'min-h-14'}`}>
+            {service.name}
+            <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.5} />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ConstructionEntry({ services }: { services: Service[] | undefined }) {
+  const construction = services?.filter((service) => service.slug !== 'real-estate')
+  return (
+    <section className="container-page pb-section">
+      <div className="grid-editorial items-center gap-y-12">
+        <Reveal className="desk:col-span-7">
+          <Media src={editorial.construction.src} alt={editorial.construction.alt} aspect="aspect-[4/3] desk:aspect-[7/6]" illustrative sizes="(min-width: 980px) 58vw, 100vw" />
         </Reveal>
-        <Reveal className="lg:col-span-9" delay={100}>
-          <p className="font-display text-[2rem] leading-[1.15] text-ink sm:text-5xl sm:leading-[1.1]">
-            A trusted partner for premium residential and commercial construction — <em className="text-bronze-dark">engineering excellence</em>, modern design and rigorous project management, from first drawing to finished building.
+        <Reveal className="desk:col-span-4 desk:col-start-9" delay={120}>
+          <p className="label text-mute">
+            <span className="text-bronze">(01)</span> Construction
           </p>
-          <div className="mt-12 grid gap-8 border-t border-stone-300 pt-8 sm:grid-cols-2">
-            <p className="max-w-md leading-relaxed text-stone-600">{company.description}</p>
-            <div className="sm:justify-self-end">
-              <ButtonLink to="/about" variant="secondary" arrow>
-                About BRIGHTHOMES
-              </ButtonLink>
-            </div>
-          </div>
+          <h2 className="mt-5 font-display text-section font-medium">
+            From plan <Em>to structure.</Em>
+          </h2>
+          <p className="mt-6 text-[15px] leading-[1.6] text-ink2">Architectural and structural drawings, survey plans, building approval, site supervision and construction management — and renovation of existing buildings.</p>
+          <div className="mt-8">{construction ? <ServiceIndexList services={construction} compact /> : <Skeleton className="h-64" />}</div>
+          <Link to={routes.construction} className="text-link mt-6">
+            View construction work <ArrowRight aria-hidden="true" className="arrow size-4" strokeWidth={1.5} />
+          </Link>
         </Reveal>
-      </Container>
+      </div>
     </section>
   )
 }
 
-function Achievements() {
+function RealEstateEntry() {
   return (
-    <section aria-labelledby="record-title" className="blueprint-grid bg-ink py-24 text-paper sm:py-32">
-      <Container>
-        <div className="mb-16 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-          <SectionHeading id="record-title" tone="dark" eyebrow="Track record" title={<>Delivered, completed,<br className="hidden sm:block" /> fully compliant.</>} />
-          <ButtonLink to="/achievements" variant="inverse" arrow className="self-start lg:self-auto">
-            Our achievements
-          </ButtonLink>
+    <section className="container-page pb-section">
+      <div className="grid-editorial items-start gap-y-12">
+        <Reveal className="desk:col-span-4 desk:pt-16">
+          <p className="label text-mute">
+            <span className="text-bronze">(02)</span> Real Estate
+          </p>
+          <h2 className="mt-5 font-display text-section font-medium">
+            Property, <Em>considered.</Em>
+          </h2>
+          <p className="mt-6 text-[15px] leading-[1.6] text-ink2">Houses, apartments, land and commercial space for sale, rent and lease — presented with the same care we bring to building them, for clients at home and in the diaspora.</p>
+          <ul className="mt-7 flex flex-wrap gap-2" aria-label="Listing types">
+            {Object.values(listingTypeLabels).map((label) => (
+              <li key={label} className="border border-control-line px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] uppercase">
+                {label}
+              </li>
+            ))}
+          </ul>
+          <Link to={routes.realEstate} className="text-link mt-7">
+            Browse properties <ArrowRight aria-hidden="true" className="arrow size-4" strokeWidth={1.5} />
+          </Link>
+        </Reveal>
+        <div className="grid grid-cols-12 gap-6 desk:col-span-7 desk:col-start-6">
+          <Reveal className="col-span-12">
+            <Media src={editorial.realEstate.src} alt={editorial.realEstate.alt} aspect="aspect-[16/10]" illustrative labelPosition="top-left" sizes="(min-width: 980px) 55vw, 100vw" />
+          </Reveal>
+          <Reveal className="col-span-8 col-start-5 -mt-[12%] phone:col-span-6 phone:col-start-7" delay={150}>
+            <Media src={editorial.facade.src} alt={editorial.facade.alt} aspect="aspect-[4/5]" className="outline-[12px] outline-bg" sizes="(min-width: 980px) 28vw, 60vw" />
+          </Reveal>
         </div>
-        <AchievementStats />
-      </Container>
+      </div>
     </section>
   )
 }
 
-function Services() {
-  const services = useServices()
+function ServicesIndex({ services }: { services: Service[] | undefined }) {
+  const [active, setActive] = useState(0)
+  const current = services?.[active]
+  const image = current ? serviceImage(current.slug) : editorial.drafting
   return (
-    <section aria-labelledby="services-title" className="bg-bone py-24 sm:py-32">
-      <Container>
-        <div className="mb-16 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-          <SectionHeading id="services-title" eyebrow="What we do" title="Every stage of the build, under one roof." intro="From drawings and approvals to supervision, management and real estate — eight disciplines, one accountable team." />
-          <ButtonLink to="/services" variant="secondary" arrow className="self-start lg:self-auto">
-            Explore services
-          </ButtonLink>
-        </div>
-        {services.isPending ? (
-          <>
-            <LoadingAnnouncement label="Loading services" />
-            <ServiceIndexSkeleton />
-          </>
-        ) : services.isError ? (
-          <ErrorState error={services.error} onRetry={() => void services.refetch()} />
-        ) : services.data.length === 0 ? (
-          <EmptyState title="Our services are being updated.">Please contact us to discuss your project in the meantime.</EmptyState>
-        ) : (
-          <ServiceIndex services={services.data} />
-        )}
-      </Container>
-    </section>
-  )
-}
-
-function FeaturedProjects() {
-  const projects = useProjects({ page: 1 })
-  const featured = projects.data?.results.slice(0, 3) ?? []
-  const hasDemo = featured.some((project) => project.is_demo)
-  return (
-    <section aria-labelledby="projects-title" className="py-24 sm:py-32">
-      <Container>
-        <div className="mb-16 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-          <SectionHeading id="projects-title" eyebrow="Projects" title="Selected work." intro="Residential and commercial projects, completed and ongoing." />
-          <ButtonLink to="/projects" variant="secondary" arrow className="self-start lg:self-auto">
-            View all projects
-          </ButtonLink>
-        </div>
-        {projects.isPending ? (
-          <div className="grid gap-10 lg:grid-cols-12">
-            <LoadingAnnouncement label="Loading projects" />
-            <div className="lg:col-span-7">
-              <ProjectCardSkeleton aspect="aspect-[4/3]" />
-            </div>
-            <div className="grid gap-10 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
-              <ProjectCardSkeleton aspect="aspect-[16/10]" />
-              <ProjectCardSkeleton aspect="aspect-[16/10]" />
-            </div>
-          </div>
-        ) : projects.isError ? (
-          <ErrorState error={projects.error} onRetry={() => void projects.refetch()} />
-        ) : featured.length === 0 ? (
-          <EmptyState title="Our portfolio is being prepared." action={<ButtonLink to="/contact" arrow>Discuss your project</ButtonLink>}>
-            Project case studies will be published here soon.
-          </EmptyState>
-        ) : (
-          <>
-            <div className="grid gap-x-10 gap-y-14 lg:grid-cols-12">
-              <Reveal className="lg:col-span-7">
-                <ProjectCard project={featured[0]} aspect="aspect-[4/3]" titleSize="lg" sizes="(min-width: 1024px) 58vw, 100vw" />
-              </Reveal>
-              {featured.length > 1 && (
-                <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
-                  {featured.slice(1).map((project, index) => (
-                    <Reveal key={project.id} delay={(index + 1) * 120}>
-                      <ProjectCard project={project} aspect="aspect-[16/10]" sizes="(min-width: 1024px) 40vw, (min-width: 640px) 50vw, 100vw" />
-                    </Reveal>
-                  ))}
-                </div>
+    <section className="bg-paper py-section" aria-labelledby="services-title">
+      <div className="container-page">
+        <SectionHeading
+          number="03"
+          label="Services"
+          id="services-title"
+          title={
+            <>
+              {services ? `${numberWord(services.length)} services.` : 'Our services.'}
+              <br />
+              <Em>One accountable team.</Em>
+            </>
+          }
+          action={
+            <Link to={routes.services} className="text-link">
+              All services <ArrowRight aria-hidden="true" className="arrow size-4" strokeWidth={1.5} />
+            </Link>
+          }
+        />
+        <div className="grid-editorial mt-[clamp(40px,5vw,72px)]">
+          <div className="hidden desk:col-span-5 desk:block">
+            <div className="sticky top-28">
+              <Media key={image.src} src={image.src} alt={image.alt} aspect="aspect-[4/5]" className="animate-fade" illustrative />
+              {current && (
+                <p className="mt-3 flex justify-between text-[12px] text-mute">
+                  <span>{padIndex(active)} / {padIndex((services?.length ?? 1) - 1)}</span>
+                  <span>{current.name}</span>
+                </p>
               )}
             </div>
-            {hasDemo && <p className="mt-12 border-l-2 border-bronze pl-4 text-sm text-stone-600">Projects marked “Demo content” are placeholders used while the portfolio is prepared. They are not BRIGHTHOMES projects.</p>}
+          </div>
+          <ol className="border-t border-line desk:col-span-7 desk:col-start-6">
+            {services
+              ? services.map((service, index) => (
+                  <li key={service.id} className="border-b border-line">
+                    <Link
+                      to={routes.service(service.slug)}
+                      onMouseEnter={() => setActive(index)}
+                      onFocus={() => setActive(index)}
+                      className="group grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-4 py-6 transition-[padding] duration-300 hover:pl-3 focus-visible:pl-3"
+                    >
+                      <span className="text-[12px] font-semibold text-bronze tabular-nums">{padIndex(index)}</span>
+                      <span>
+                        <span className={`block font-display text-[clamp(24px,2.4vw,32px)] leading-[1.1] font-medium transition-colors ${index === active ? 'desk:italic' : ''} group-hover:text-bronze`}>{service.name}</span>
+                        <span className="mt-1 block text-[13px] leading-[1.55] text-ink2">{service.short_description}</span>
+                      </span>
+                      <ArrowUpRight aria-hidden="true" className="size-4 self-center" strokeWidth={1.5} />
+                    </Link>
+                  </li>
+                ))
+              : Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="my-4 h-16" />)}
+          </ol>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function FeaturedProperties({ properties, loading }: { properties: Property[]; loading: boolean }) {
+  if (!loading && properties.length === 0) return null
+  const [lead, ...rest] = properties
+  return (
+    <section className="container-page py-section" aria-labelledby="featured-title">
+      <SectionHeading
+        number="04"
+        label="Featured properties"
+        id="featured-title"
+        title={
+          <>
+            Selected <Em>listings.</Em>
           </>
-        )}
-      </Container>
+        }
+        action={
+          <Link to={routes.realEstate} className="text-link">
+            View all properties <ArrowRight aria-hidden="true" className="arrow size-4" strokeWidth={1.5} />
+          </Link>
+        }
+      />
+      <div className="grid-editorial mt-[clamp(40px,5vw,72px)] gap-y-14">
+        <div className="desk:col-span-7">{lead ? <PropertyItem property={lead} titleSize="text-[clamp(28px,2.8vw,40px)]" sizes="(min-width: 980px) 56vw, 100vw" /> : <PropertyItemSkeleton />}</div>
+        <div className="grid gap-y-14 phone:grid-cols-2 phone:gap-x-6 desk:col-span-5 desk:grid-cols-1">
+          {loading && !lead
+            ? [0, 1].map((index) => <PropertyItemSkeleton key={index} />)
+            : rest.slice(0, 2).map((property) => <PropertyItem key={property.id} property={property} aspect="aspect-[16/10]" titleSize="text-[24px]" sizes="(min-width: 980px) 38vw, 50vw" />)}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function SelectedProjects({ projects, loading }: { projects: Project[]; loading: boolean }) {
+  if (!loading && projects.length === 0) return null
+  // Asymmetric 7 / 4 / 8-column crops (W-01 (05)).
+  const layout = [
+    { cell: 'desk:col-span-7', aspect: 'aspect-[4/3]' },
+    { cell: 'desk:col-span-4 desk:col-start-9 desk:mt-40', aspect: 'aspect-[4/5]' },
+    { cell: 'desk:col-span-8 desk:col-start-3', aspect: 'aspect-[16/9]' },
+  ]
+  return (
+    <section className="bg-stone py-section" aria-labelledby="projects-title">
+      <div className="container-page">
+        <SectionHeading
+          onStone
+          number="05"
+          label="Selected projects"
+          id="projects-title"
+          title={
+            <>
+              Work, <Em>in detail.</Em>
+            </>
+          }
+          action={
+            <Link to={routes.construction} className="text-link">
+              All case studies <ArrowRight aria-hidden="true" className="arrow size-4" strokeWidth={1.5} />
+            </Link>
+          }
+        />
+        <div className="grid-editorial mt-[clamp(40px,5vw,72px)] gap-y-16">
+          {loading && projects.length === 0
+            ? layout.map((item, index) => (
+                <div key={index} className={item.cell}>
+                  <ProjectItemSkeleton aspect={item.aspect} />
+                </div>
+              ))
+            : projects.slice(0, 3).map((project, index) => (
+                <Reveal key={project.id} className={layout[index].cell}>
+                  <ProjectItem project={project} index={index} aspect={layout[index].aspect} sizes="(min-width: 980px) 60vw, 100vw" />
+                </Reveal>
+              ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function WhyUs() {
+  const numerals = ['I.', 'II.', 'III.']
+  return (
+    <section className="container-page py-section" aria-labelledby="why-title">
+      <div className="grid-editorial gap-y-12">
+        <div className="desk:col-span-4">
+          <p className="label text-mute">
+            <span className="text-bronze">(07)</span> Why BRIGHTHOMES
+          </p>
+          <h2 id="why-title" className="mt-5 font-display text-section font-medium">
+            Why clients <Em>trust us.</Em>
+          </h2>
+        </div>
+        <ol className="grid gap-10 phone:grid-cols-3 desk:col-span-8">
+          {trustPillars.map((pillar, index) => (
+            <li key={pillar.title} className="border-t border-ink pt-6">
+              <p className="font-display text-[28px] text-bronze">{numerals[index]}</p>
+              <h3 className="mt-4 text-[15px] font-semibold">{pillar.title}</h3>
+              <p className="mt-3 text-[14px] leading-[1.6] text-ink2">{pillar.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   )
 }
 
 export default function HomePage() {
+  const services = useServices()
+  const featuredProperties = useProperties({ is_featured: true })
+  const latestProperties = useProperties({}, { enabled: featuredProperties.isSuccess && featuredProperties.data.count === 0 })
+  const featuredProjects = useProjects({ is_featured: true })
+  const latestProjects = useProjects({}, { enabled: featuredProjects.isSuccess && featuredProjects.data.count < 3 })
+
+  const properties = featuredProperties.data?.count ? featuredProperties.data.results : (latestProperties.data?.results ?? [])
+  // Featured projects lead; the latest fill any remaining places.
+  const projectPool = [...(featuredProjects.data?.results ?? []), ...(latestProjects.data?.results ?? [])]
+  const projects = projectPool.filter((project, index) => projectPool.findIndex((other) => other.id === project.id) === index)
+
   return (
     <>
       <title>BRIGHTHOMES Construction Service — Building Dreams, Constructing Reality.</title>
       <Hero />
-      <Introduction />
-      <Achievements />
-      <TrustSection />
-      <Services />
-      <FeaturedProjects />
-      <ObjectivesSection />
-      <ConsultationCta />
+      <Statement />
+      <ConstructionEntry services={services.data} />
+      <RealEstateEntry />
+      <ServicesIndex services={services.data} />
+      <FeaturedProperties properties={properties} loading={featuredProperties.isPending || latestProperties.isFetching} />
+      <SelectedProjects projects={projects} loading={featuredProjects.isPending || latestProjects.isFetching} />
+      <FiguresBand number="06" />
+      <WhyUs />
+      <ConsultationCta number="08" />
     </>
   )
 }

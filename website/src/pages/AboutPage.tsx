@@ -1,76 +1,81 @@
-import { ElevationPlaceholder } from '../components/art/Elevations'
-import { ConsultationCta, ObjectivesSection, TrustSection } from '../components/sections/CompanySections'
-import { ButtonLink } from '../components/ui/Button'
-import { Container, PageHeader } from '../components/ui/Layout'
+import { ConsultationCta } from '../components/sections/ConsultationCta'
+import { FiguresBand } from '../components/sections/FiguresBand'
+import { Media } from '../components/media/Media'
+import { BAR_OFFSET, Em } from '../components/ui/Layout'
 import { Reveal } from '../components/ui/Reveal'
-import { company } from '../content/company'
-import { padIndex } from '../lib/format'
+import { objectives, trustPillars } from '../content/company'
+import { editorial } from '../content/media'
 
-const approach = [
-  { title: 'Engineering', body: 'Architectural and structural drawings, survey plans and building approvals establish a sound technical basis before work begins.' },
-  { title: 'Design', body: 'Modern design that responds to how each residential or commercial building will be used.' },
-  { title: 'Project management', body: 'Site supervision and construction management keep the build coordinated and aligned with the approved drawings.' },
-] as const
+const NUMERALS = ['I.', 'II.', 'III.', 'IV.']
 
+/** W-02: company description from verified facts only; material image, figures band, "What we stand on". */
 export default function AboutPage() {
   return (
     <>
       <title>About — BRIGHTHOMES Construction Service</title>
-      <PageHeader eyebrow="About BRIGHTHOMES" title={<>Construction, done <em className="text-bronze-light">properly.</em></>} intro={company.tagline} />
+      <header className={`container-page ${BAR_OFFSET} pb-[clamp(48px,6vw,96px)]`}>
+        <p className="label text-mute">BRIGHTHOMES / About</p>
+        <h1 className="mt-6 font-display text-[clamp(56px,8.4vw,136px)] leading-[0.96] font-medium tracking-[-0.015em]">
+          Building dreams,
+          <br />
+          <Em>constructing reality.</Em>
+        </h1>
+      </header>
 
-      <section aria-labelledby="what-title" className="py-24 sm:py-32">
-        <Container className="grid gap-14 lg:grid-cols-12 lg:gap-10">
-          <Reveal className="lg:col-span-7">
-            <h2 id="what-title" className="eyebrow flex items-center gap-3 text-bronze-dark">
-              <span aria-hidden="true" className="h-px w-8 bg-current" />
-              What we do
-            </h2>
-            <p className="mt-8 font-display text-[2rem] leading-[1.15] sm:text-[2.8rem] sm:leading-[1.1]">{company.description}</p>
-            <div className="mt-12 grid gap-8 border-t border-stone-300 pt-8 sm:grid-cols-2">
-              <div>
-                <h3 className="font-display text-3xl">Residential</h3>
-                <p className="mt-3 leading-relaxed text-stone-600">Homes designed, approved, built and supervised with the care a family investment deserves.</p>
-              </div>
-              <div>
-                <h3 className="font-display text-3xl">Commercial</h3>
-                <p className="mt-3 leading-relaxed text-stone-600">Commercial buildings delivered with the coordination, compliance and quality that businesses depend on.</p>
-              </div>
-            </div>
+      <section className="container-page pb-section">
+        <div className="grid-editorial items-end gap-y-10">
+          <Reveal className="desk:col-span-7">
+            <Media src={editorial.facade.src} alt={editorial.facade.alt} aspect="aspect-[4/3]" illustrative sizes="(min-width: 980px) 58vw, 100vw" />
           </Reveal>
-          <Reveal className="lg:col-span-5" delay={150}>
-            <figure>
-              <ElevationPlaceholder seed={2} tone="light" className="aspect-[4/5] w-full" />
-              <figcaption className="mt-3 text-xs uppercase tracking-[0.18em] text-stone-500">Illustrative drawing</figcaption>
-            </figure>
+          <Reveal className="space-y-5 desk:col-span-4 desk:col-start-9" delay={120}>
+            <p className="text-[18px] leading-[1.6] text-ink">BRIGHTHOMES Construction Service is a construction and real estate company in Ibeju-Lekki, Lagos.</p>
+            <p className="text-[15px] leading-[1.6] text-ink2">We provide architectural and structural drawings, survey plans, building approval, site supervision, construction management and renovation — and we help clients buy, rent and lease property.</p>
+            <p className="text-[15px] leading-[1.6] text-ink2">Our clients deal with one team for the whole journey, whether they are in Lagos or managing their project from abroad.</p>
           </Reveal>
-        </Container>
+        </div>
       </section>
 
-      <section aria-labelledby="approach-title" className="bg-bone py-24 sm:py-32">
-        <Container>
-          <h2 id="approach-title" className="max-w-3xl font-display text-[2.6rem] leading-[1.02] sm:text-6xl">An integrated approach: engineering, design and management.</h2>
-          <ol className="mt-16 grid border-t border-stone-300 md:grid-cols-3">
-            {approach.map((item, index) => (
-              <Reveal as="li" key={item.title} delay={index * 100} className="border-b border-stone-300 py-10 md:border-b-0 md:border-r md:px-8 md:first:pl-0 md:last:border-r-0">
-                <span className="text-xs font-semibold tracking-[0.2em] text-stone-500">{padIndex(index)}</span>
-                <h3 className="mt-6 font-display text-4xl">{item.title}</h3>
-                <p className="mt-4 leading-relaxed text-stone-600">{item.body}</p>
-              </Reveal>
+      <FiguresBand label="Track record" />
+
+      <section className="container-page py-section" aria-labelledby="values-title">
+        <div className="grid-editorial gap-y-12">
+          <div className="desk:col-span-4">
+            <p className="label text-mute">Our objectives</p>
+            <h2 id="values-title" className="mt-5 font-display text-section font-medium">
+              What we <Em>stand on.</Em>
+            </h2>
+          </div>
+          <ol className="grid gap-10 phone:grid-cols-2 desk:col-span-8">
+            {objectives.map((item, index) => (
+              <li key={item.title} className="border-t border-ink pt-6">
+                <p className="font-display text-[28px] text-bronze">{NUMERALS[index]}</p>
+                <h3 className="mt-4 text-[15px] font-semibold">{item.title}</h3>
+                <p className="mt-3 text-[14px] leading-[1.6] text-ink2">{item.body}</p>
+              </li>
             ))}
           </ol>
-          <div className="mt-14 flex flex-wrap gap-4">
-            <ButtonLink to="/services" arrow>
-              Our services
-            </ButtonLink>
-            <ButtonLink to="/projects" variant="secondary">
-              View projects
-            </ButtonLink>
-          </div>
-        </Container>
+        </div>
       </section>
 
-      <TrustSection />
-      <ObjectivesSection />
+      <section className="border-t border-line bg-paper py-section" aria-labelledby="trust-title">
+        <div className="container-page grid-editorial gap-y-12">
+          <div className="desk:col-span-4">
+            <p className="label text-mute">Why BRIGHTHOMES</p>
+            <h2 id="trust-title" className="mt-5 font-display text-section font-medium">
+              Why clients <Em>trust us.</Em>
+            </h2>
+          </div>
+          <ol className="grid gap-10 phone:grid-cols-3 desk:col-span-8">
+            {trustPillars.map((pillar, index) => (
+              <li key={pillar.title} className="border-t border-ink pt-6">
+                <p className="font-display text-[28px] text-bronze">{NUMERALS[index]}</p>
+                <h3 className="mt-4 text-[15px] font-semibold">{pillar.title}</h3>
+                <p className="mt-3 text-[14px] leading-[1.6] text-ink2">{pillar.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
       <ConsultationCta />
     </>
   )

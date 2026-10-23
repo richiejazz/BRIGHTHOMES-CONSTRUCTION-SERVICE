@@ -48,11 +48,21 @@ export const objectives = [
   { title: 'Timely Delivery', body: 'Careful planning and coordination keep projects moving toward completion.' },
 ] as const
 
+/** Website top bar (spec §05): five sections; account access and the CTA sit to the right. */
 export const primaryNav = [
-  { to: '/', label: 'Home' },
-  { to: '/about', label: 'About' },
+  { to: '/construction', label: 'Construction' },
+  { to: '/real-estate', label: 'Real Estate' },
   { to: '/services', label: 'Services' },
-  { to: '/projects', label: 'Projects' },
+  { to: '/about', label: 'About' },
+  { to: '/contact', label: 'Contact' },
+] as const
+
+/** Footer "Explore" column (spec §05 / W-01 footer). */
+export const footerNav = [
+  { to: '/construction', label: 'Construction' },
+  { to: '/real-estate', label: 'Real Estate' },
+  { to: '/services', label: 'Services' },
+  { to: '/about', label: 'About' },
   { to: '/achievements', label: 'Achievements' },
   { to: '/contact', label: 'Contact' },
 ] as const
