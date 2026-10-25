@@ -23,6 +23,9 @@ INSTALLED_APPS = [
 if env("CLOUDINARY_URL", default=""):
     INSTALLED_APPS += ["cloudinary", "cloudinary_storage"]
     STORAGES = {"default": {"BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"}}
+    # Keep BRIGHTHOMES uploads in their own folder and tag within a shared Cloudinary account.
+    # Credentials still come from CLOUDINARY_URL (no keys are set here).
+    CLOUDINARY_STORAGE = {"PREFIX": "brighthomes/media/", "MEDIA_TAG": "brighthomes"}
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "django.contrib.sessions.middleware.SessionMiddleware", "corsheaders.middleware.CorsMiddleware", "django.middleware.common.CommonMiddleware", "django.middleware.csrf.CsrfViewMiddleware", "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware", "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
