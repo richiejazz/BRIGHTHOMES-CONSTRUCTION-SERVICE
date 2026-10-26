@@ -10,6 +10,7 @@ from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.db import DatabaseError
 from django.test import SimpleTestCase, TestCase, override_settings
 from PIL import Image
 from rest_framework import status
@@ -273,6 +274,47 @@ class SeedContentTestCase(TestCase):
         self.assertIn("Skipped image illustrative-land-plots-1.jpg", errors)
         self.assertEqual(Property.objects.get(slug="illustrative-contemporary-villa").images.count(), 1)
 
+    def test_rejected_upload_does_not_stop_the_seed(self):
+        call_command("seed_company_content", stdout=StringIO())
+        with mock.patch("django.core.files.storage.FileSystemStorage._save", side_effect=RuntimeError("Invalid Signature")) as upload:
+            output, errors = self.seed()  # must not raise
+        self.assertEqual(upload.call_count, 1)  # uploads stop after the first failure
+        self.assertIn("created 10 records, 0 images", output)
+        self.assertIn("Skipped image illustrative-contemporary-villa-1.jpg for illustrative-contemporary-villa: upload failed (RuntimeError: Invalid Signature)", errors)
+        self.assertIn("Image uploads stopped after the first failure", errors)
+        self.assertEqual((Property.objects.count(), Project.objects.count()), (6, 4))
+        self.assertFalse(PropertyImage.objects.exists() or ProjectImage.objects.exists())  # no broken image rows
+        output, errors = self.seed()  # storage works again
+        self.assertIn("created 0 records, 20 images", output)
+        self.assertEqual(errors, "")
+        self.assertEqual(PropertyImage.objects.count() + ProjectImage.objects.count(), 20)
+
+    def test_database_errors_are_not_swallowed(self):
+        call_command("seed_company_content", stdout=StringIO())
+        with mock.patch.object(PropertyImage, "save", side_effect=DatabaseError("database unavailable")):
+            with self.assertRaises(DatabaseError):
+                self.seed()
+        with mock.patch("django.core.files.storage.FileSystemStorage._save", side_effect=DatabaseError("database unavailable")):
+            with self.assertRaises(DatabaseError):
+                self.seed()
+
+    def test_upload_errors_are_logged_without_credentials(self):
+        secret_url = "cloudinary://987654321:Sup3rS3cretValue@demo-cloud"
+        message = (
+            f"Unknown API key 987654321. Invalid Signature 0a1b2c. String to sign - 'folder=brighthomes&timestamp=1'. "
+            f"url={secret_url} signature=deadbeefcafe api_secret=Sup3rS3cretValue"
+        )
+        with mock.patch.dict(os.environ, {"CLOUDINARY_URL": secret_url}):
+            text = seed_module.safe_error(RuntimeError(message))
+            call_command("seed_company_content", stdout=StringIO())
+            with mock.patch("django.core.files.storage.FileSystemStorage._save", side_effect=RuntimeError(message)):
+                _, errors = self.seed()
+        self.assertTrue(text.startswith("RuntimeError: "))
+        self.assertIn("RuntimeError:", errors)
+        for leaked in ("987654321", "Sup3rS3cretValue", "deadbeefcafe", "folder=brighthomes&timestamp=1", "demo-cloud"):
+            self.assertNotIn(leaked, text)
+            self.assertNotIn(leaked, errors)
+
     def test_oversized_or_non_jpeg_photos_are_optimised(self):
         buffer = BytesIO()
         Image.new("RGB", (2400, 1600), "teal").save(buffer, "PNG")
@@ -298,9 +340,13 @@ import django
 django.setup()
 from django.conf import settings
 from django.core.management import call_command
+import os
+from cloudinary.exceptions import AuthorizationRequired
 uploads = []
 def upload(content, **options):
     uploads.append({"folder": options.get("folder"), "tags": options.get("tags")})
+    if os.environ.get("PROBE_REJECT"):
+        raise AuthorizationRequired("Invalid Signature 0a1b2c. String to sign - 'folder=x&timestamp=1'. key 123456789 test-secret")
     # Like Cloudinary with use_filename: the public ID is the folder plus the file name without its extension.
     return {"public_id": options["folder"] + "/" + content.name.rsplit("/", 1)[-1].rsplit(".", 1)[0], "version": 1}
 with mock.patch("cloudinary.uploader.upload", side_effect=upload):
@@ -308,13 +354,15 @@ with mock.patch("cloudinary.uploader.upload", side_effect=upload):
     call_command("seed_company_content", verbosity=0)
     call_command("seed_illustrative_content", verbosity=0)
 from properties.models import PropertyImage
-print(json.dumps({"backend": settings.STORAGES["default"]["BACKEND"], "uploads": uploads,
-                  "url": PropertyImage.objects.order_by("id").first().image.url}))
+from projects.models import ProjectImage
+first = PropertyImage.objects.order_by("id").first()
+print(json.dumps({"backend": settings.STORAGES["default"]["BACKEND"], "uploads": uploads, "url": first.image.url if first else None,
+                  "image_rows": PropertyImage.objects.count() + ProjectImage.objects.count()}))
 """
 
 
 class SeedCloudinaryStorageTestCase(SimpleTestCase):
-    def test_seed_uploads_into_the_brighthomes_media_folder(self):
+    def run_probe(self, **extra_env):
         backend = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as folder:
             env = {
@@ -323,10 +371,22 @@ class SeedCloudinaryStorageTestCase(SimpleTestCase):
                 "SECRET_KEY": "test-only-secret-key",
                 "DATABASE_URL": f"sqlite:///{folder}/probe.sqlite3",
                 "CLOUDINARY_URL": "cloudinary://123456789:test-secret@test-cloud",
+                **extra_env,
             }
             result = subprocess.run([sys.executable, "-c", CLOUDINARY_PROBE], cwd=backend, env=env, capture_output=True, text=True, timeout=180)
         self.assertEqual(result.returncode, 0, result.stderr[-2000:])
-        report = json.loads(result.stdout.strip().splitlines()[-1])
+        return json.loads(result.stdout.strip().splitlines()[-1]), result.stderr
+
+    def test_rejected_cloudinary_upload_lets_startup_continue(self):
+        report, errors = self.run_probe(PROBE_REJECT="1")
+        self.assertEqual((len(report["uploads"]), report["image_rows"]), (1, 0))
+        self.assertIn("upload failed (AuthorizationRequired: Invalid Signature 0a1b2c. String to sign - [redacted]", errors)
+        for leaked in ("123456789", "test-secret", "folder=x&timestamp=1"):
+            self.assertNotIn(leaked, errors)
+
+    def test_seed_uploads_into_the_brighthomes_media_folder(self):
+        report, _ = self.run_probe()
+        self.assertEqual(report["image_rows"], 20)
         self.assertEqual(report["backend"], "cloudinary_storage.storage.MediaCloudinaryStorage")
         self.assertEqual(len(report["uploads"]), 20)
         for upload in report["uploads"]:
