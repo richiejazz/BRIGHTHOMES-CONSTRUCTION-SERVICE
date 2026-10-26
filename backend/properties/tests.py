@@ -1,15 +1,21 @@
+import json
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 from io import BytesIO, StringIO
+from pathlib import Path
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from core.management.commands import seed_illustrative_content as seed_module
 from enquiries.models import Enquiry
 from projects.models import Project, ProjectCategory, ProjectImage
 from saved.models import SavedProperty
@@ -185,11 +191,26 @@ class SeedContentTestCase(TestCase):
         call_command("seed_company_content", stdout=StringIO())
         self.assertEqual(list(PropertyCategory.objects.values_list("slug", flat=True)), ["house", "apartment", "land", "commercial", "estate-development", "other"])
 
+    def seed(self, *args):
+        stdout, stderr = StringIO(), StringIO()
+        call_command("seed_illustrative_content", *args, stdout=stdout, stderr=stderr)
+        return stdout.getvalue(), stderr.getvalue()
+
+    def test_every_manifest_photo_is_bundled_and_web_sized(self):
+        manifest = json.loads(seed_module.MANIFEST.read_text())
+        for entry in manifest["projects"] + manifest["properties"]:
+            for number in range(1, len(entry["images"]) + 1):
+                path = seed_module.image_path(entry["slug"], number)
+                self.assertTrue(path.is_file(), path.name)
+                with Image.open(path) as image:
+                    self.assertEqual(image.format, "JPEG", path.name)
+                    self.assertLessEqual(max(image.size), 1600, path.name)
+
     def test_illustrative_seed_is_marked_demo_without_invented_details(self):
         call_command("seed_company_content", stdout=StringIO())
-        with mock.patch("core.management.commands.seed_illustrative_content.fetch_image", return_value=jpeg_bytes((2400, 1600))):
-            call_command("seed_illustrative_content", stdout=StringIO())
-            call_command("seed_illustrative_content", stdout=StringIO())
+        output, errors = self.seed()
+        self.assertIn("created 10 records, 20 images", output)
+        self.assertEqual(errors, "")
         listings = Property.objects.all()
         self.assertEqual(listings.count(), 6)
         self.assertEqual(Project.objects.count(), 4)
@@ -201,14 +222,114 @@ class SeedContentTestCase(TestCase):
         for project in Project.objects.all():
             self.assertTrue(project.is_demo)
             self.assertEqual((project.location, project.start_date, project.end_date), ("", None, None))
-        image = PropertyImage.objects.first().image
-        with Image.open(image) as stored:
-            self.assertLessEqual(max(stored.size), 1600)
-        self.assertIn("Unsplash", PropertyImage.objects.first().caption)
+            self.assertEqual(project.images.count(), 2)
+        image = PropertyImage.objects.get(property__slug="illustrative-land-plots", display_order=0)
+        self.assertIn("Paul Addo on Unsplash", image.caption)
+        # Bundled photos are already web-sized JPEGs, so they are stored byte-for-byte.
+        with image.image.open("rb") as stored:
+            self.assertEqual(stored.read(), seed_module.image_path("illustrative-land-plots", 1).read_bytes())
 
-    def test_illustrative_seed_survives_failed_downloads(self):
+    def test_repeated_seeding_creates_no_duplicates(self):
         call_command("seed_company_content", stdout=StringIO())
-        with mock.patch("core.management.commands.seed_illustrative_content.fetch_image", side_effect=OSError("offline")):
-            call_command("seed_illustrative_content", stdout=StringIO(), stderr=StringIO())
-        self.assertEqual(Property.objects.count(), 6)
+        self.seed()
+        output, _ = self.seed()
+        self.assertIn("created 0 records, 0 images", output)
+        self.assertEqual((Property.objects.count(), Project.objects.count()), (6, 4))
+        self.assertEqual((PropertyImage.objects.count(), ProjectImage.objects.count()), (12, 8))
+
+    def test_records_created_without_photos_get_them_on_a_later_run(self):
+        # The live database is in this state: records exist, photos never arrived.
+        call_command("seed_company_content", stdout=StringIO())
+        self.seed("--skip-images")
         self.assertFalse(PropertyImage.objects.exists())
+        output, _ = self.seed()
+        self.assertIn("created 0 records, 20 images", output)
+
+    def test_existing_images_are_never_replaced(self):
+        call_command("seed_company_content", stdout=StringIO())
+        self.seed("--skip-images")
+        villa = Property.objects.get(slug="illustrative-contemporary-villa")
+        own = PropertyImage.objects.create(property=villa, image=jpeg_upload("own.jpg"), alt_text="Our photo", is_cover=True)
+        self.seed()
+        self.assertEqual(list(villa.images.all()), [own])
+        self.assertEqual(PropertyImage.objects.exclude(property=villa).count(), 10)
+
+    def test_genuine_record_with_a_matching_slug_is_left_alone(self):
+        call_command("seed_company_content", stdout=StringIO())
+        genuine = Property.objects.create(slug="illustrative-pavilion-house", title="Real listing", summary="Real", category=PropertyCategory.objects.get(slug="house"), is_demo=False)
+        self.seed()
+        genuine.refresh_from_db()
+        self.assertEqual((genuine.title, genuine.is_demo, genuine.images.count()), ("Real listing", False, 0))
+
+    def test_missing_or_unreadable_photos_are_skipped_not_fatal(self):
+        call_command("seed_company_content", stdout=StringIO())
+        with tempfile.TemporaryDirectory() as folder:
+            shutil.copy(seed_module.image_path("illustrative-contemporary-villa", 1), folder)
+            Path(folder, "illustrative-contemporary-villa-2.jpg").write_bytes(b"not an image")
+            with mock.patch.object(seed_module, "IMAGE_DIR", Path(folder)):
+                output, errors = self.seed()
+        self.assertIn("created 10 records, 1 images", output)
+        self.assertIn("Skipped image illustrative-contemporary-villa-2.jpg", errors)
+        self.assertIn("Skipped image illustrative-land-plots-1.jpg", errors)
+        self.assertEqual(Property.objects.get(slug="illustrative-contemporary-villa").images.count(), 1)
+
+    def test_oversized_or_non_jpeg_photos_are_optimised(self):
+        buffer = BytesIO()
+        Image.new("RGB", (2400, 1600), "teal").save(buffer, "PNG")
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder, "photo.jpg")
+            path.write_bytes(buffer.getvalue())
+            data = seed_module.load_image(path)
+        with Image.open(BytesIO(data)) as image:
+            self.assertEqual((image.format, max(image.size)), ("JPEG", 1600))
+
+
+# Runs the real seed with production settings and Cloudinary storage in a separate process (the storage reads its
+# settings once, at import). Credentials are fake, every network connection is blocked and the upload call is
+# mocked, so nothing leaves the machine.
+CLOUDINARY_PROBE = """
+import json, socket
+from unittest import mock
+def offline(*args, **kwargs):
+    raise OSError("network blocked in test")
+socket.socket.connect = offline
+socket.create_connection = offline
+import django
+django.setup()
+from django.conf import settings
+from django.core.management import call_command
+uploads = []
+def upload(content, **options):
+    uploads.append({"folder": options.get("folder"), "tags": options.get("tags")})
+    # Like Cloudinary with use_filename: the public ID is the folder plus the file name without its extension.
+    return {"public_id": options["folder"] + "/" + content.name.rsplit("/", 1)[-1].rsplit(".", 1)[0], "version": 1}
+with mock.patch("cloudinary.uploader.upload", side_effect=upload):
+    call_command("migrate", verbosity=0)
+    call_command("seed_company_content", verbosity=0)
+    call_command("seed_illustrative_content", verbosity=0)
+from properties.models import PropertyImage
+print(json.dumps({"backend": settings.STORAGES["default"]["BACKEND"], "uploads": uploads,
+                  "url": PropertyImage.objects.order_by("id").first().image.url}))
+"""
+
+
+class SeedCloudinaryStorageTestCase(SimpleTestCase):
+    def test_seed_uploads_into_the_brighthomes_media_folder(self):
+        backend = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as folder:
+            env = {
+                **os.environ,
+                "DJANGO_SETTINGS_MODULE": "config.settings.production",
+                "SECRET_KEY": "test-only-secret-key",
+                "DATABASE_URL": f"sqlite:///{folder}/probe.sqlite3",
+                "CLOUDINARY_URL": "cloudinary://123456789:test-secret@test-cloud",
+            }
+            result = subprocess.run([sys.executable, "-c", CLOUDINARY_PROBE], cwd=backend, env=env, capture_output=True, text=True, timeout=180)
+        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+        report = json.loads(result.stdout.strip().splitlines()[-1])
+        self.assertEqual(report["backend"], "cloudinary_storage.storage.MediaCloudinaryStorage")
+        self.assertEqual(len(report["uploads"]), 20)
+        for upload in report["uploads"]:
+            self.assertRegex(upload["folder"], r"^brighthomes/media/(projects|properties)/\d{4}/\d{2}$")
+            self.assertEqual(upload["tags"], "brighthomes")
+        self.assertRegex(report["url"], r"^https://res\.cloudinary\.com/test-cloud/image/upload/.*brighthomes/media/properties/")

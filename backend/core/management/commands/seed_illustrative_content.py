@@ -1,7 +1,6 @@
 import json
 from io import BytesIO
 from pathlib import Path
-from urllib.request import Request, urlopen
 
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
@@ -12,7 +11,9 @@ from projects.models import Project, ProjectCategory, ProjectImage
 from properties.models import Property, PropertyCategory, PropertyImage
 
 MANIFEST = Path(__file__).resolve().parents[2] / "content" / "illustrative.json"
-DOWNLOAD_URL = "https://unsplash.com/photos/{id}/download?w=1600"
+# The photographs ship with the code (Unsplash blocks downloads from hosting providers): <slug>-<n>.jpg, where n
+# is the photo's 1-based position in the manifest entry's "images" list.
+IMAGE_DIR = MANIFEST.parent / "illustrative"
 MAX_EDGE = 1600
 
 PROPERTY_DESCRIPTION = (
@@ -27,11 +28,19 @@ PROJECT_DESCRIPTION = (
 )
 
 
-def fetch_image(unsplash_id):
-    """Download one Unsplash photograph (free Unsplash License) and return its bytes."""
-    request = Request(DOWNLOAD_URL.format(id=unsplash_id), headers={"User-Agent": "brighthomes-seed/1.0"})
-    with urlopen(request, timeout=30) as response:  # noqa: S310 - fixed https host
-        return response.read()
+def image_path(slug, number):
+    return IMAGE_DIR / f"{slug}-{number}.jpg"
+
+
+def load_image(path):
+    """Read one bundled photograph (free Unsplash License). Already web-sized JPEGs are used as they are."""
+    data = path.read_bytes()
+    with Image.open(BytesIO(data)) as image:
+        image.verify()  # rejects truncated or non-image files
+    with Image.open(BytesIO(data)) as image:
+        if image.format == "JPEG" and max(image.size) <= MAX_EDGE:
+            return data
+    return optimise(data)
 
 
 def optimise(data):
@@ -50,7 +59,7 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
-        parser.add_argument("--skip-images", action="store_true", help="Create the records without downloading photographs.")
+        parser.add_argument("--skip-images", action="store_true", help="Create the records without attaching photographs.")
 
     def handle(self, *args, skip_images=False, **options):
         manifest = json.loads(MANIFEST.read_text())
@@ -92,14 +101,17 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Illustrative content ready (created {created} records, {images} images)."))
 
     def _attach(self, owner, entries, model, field, skip_images):
-        if skip_images or owner.images.exists():
+        # Photos are only ever added to illustrative records that have none, so existing (or genuine) images are
+        # never replaced and a re-run never duplicates them.
+        if skip_images or not owner.is_demo or owner.images.exists():
             return 0
         count = 0
         for order, entry in enumerate(entries):
+            path = image_path(owner.slug, order + 1)
             try:
-                data = optimise(fetch_image(entry["unsplash_id"]))
-            except Exception as error:  # A missing photo falls back to the apps' drawn placeholder.
-                self.stderr.write(self.style.WARNING(f"Skipped image {entry['unsplash_id']} for {owner.slug}: {error}"))
+                data = load_image(path)
+            except Exception as error:  # A missing or unreadable photo falls back to the apps' drawn placeholder.
+                self.stderr.write(self.style.WARNING(f"Skipped image {path.name} ({entry['unsplash_id']}) for {owner.slug}: {error}"))
                 continue
             with transaction.atomic():
                 image = model(**{field: owner}, alt_text=entry["alt_text"], caption=f"Illustrative photograph by {entry['photographer']} on Unsplash", display_order=order, is_cover=order == 0)

@@ -1,5 +1,5 @@
 {
-  "_about": "Temporary illustrative content used until verified BRIGHTHOMES projects and listings are supplied. Every record is created with is_demo=true. Photographs are free-to-use Unsplash images (https://unsplash.com/license) downloaded into media storage by `manage.py seed_illustrative_content`; they do not show BRIGHTHOMES work. No names, locations, prices, clients, dates or specifications are invented. Replace or unpublish these records in Django Admin when real content is available.",
+  "_about": "Temporary illustrative content used until verified BRIGHTHOMES projects and listings are supplied. Every record is created with is_demo=true. Photographs are free-to-use Unsplash images (https://unsplash.com/license) bundled in core/content/illustrative/ as <slug>-<n>.jpg and copied into media storage by `manage.py seed_illustrative_content`; they do not show BRIGHTHOMES work. No names, locations, prices, clients, dates or specifications are invented. Replace or unpublish these records in Django Admin when real content is available.",
   "properties": [
     {
       "slug": "illustrative-contemporary-villa",
